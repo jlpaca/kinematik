@@ -11,7 +11,7 @@ kinematik.Actuator = function(params){
   this.mapKinematicLink();
 
   //parameters
-  this.ACTUATION_INCREMENT = 5e-2;  //increment step
+  this.ACTUATION_INCREMENT = { TH: 6e-2, D: 2e-2 }  //increment step
   this.SHIFT_SCALE = 1e-1;          //scale factor when SHIFT
 
   //list of joints pending actuation
@@ -67,9 +67,16 @@ kinematik.Actuator.prototype.mapKinematicLink = function(){
 };
 kinematik.Actuator.prototype.update = function(){ if(this.LISTENING){
   //actuate joints
+  var inc = 0;
   for(var i = 1; i < this.L.length; ++i){
     if(this.ACTUATE[i]){
-      this.L[i].increment(this.ACTUATE[i]*this.ACTUATION_INCREMENT); }
+      if(this.L[i].jointType === kinematik.JOINT_TYPE.REVOLUTE){
+        inc = this.ACTUATION_INCREMENT.TH;
+      } else if (this.L[i].jointType === kinematik.JOINT_TYPE.PRISMATIC){
+        inc = this.ACTUATION_INCREMENT.D;
+      }
+      this.L[i].increment(this.ACTUATE[i]*inc);
+    }
   }
 }};
 kinematik.Actuator.prototype.listen = function(t){ this.LISTENING = t; }

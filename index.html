@@ -19,10 +19,11 @@ h2 { font-size: 18px;}
 
 #viewport-wrapper {
   position: relative;
-  /*height: 768px;*/
-  /*width: 1024px;*/
-  height: 100%;
-  width: 100%;
+  overflow: hidden;
+  height: 768px;
+  width: 1024px;
+  /*height: 100%;
+  width: 100%;*/
 }
 
 #viewport {
@@ -44,77 +45,12 @@ h2 { font-size: 18px;}
 <script type = 'text/javascript' src = 'frames.js'></script>
 <script type = 'text/javascript' src = 'cursor3D.js'></script>
 
-<style>
-.monitor-panel {
-  cursor: default;
-  position: absolute;
-
-  color: #111;
-  background-color: #ddd;
-
-  box-shadow: 0 0 8px #444;
-  /*outline: 1px #000 solid;*/
-
-  transition: height 0.2mes;
-  -webkit-transition: height 0.2mes;
-
-  overflow: hidden;
-}
-
-.monitor-panel-title {
-
-  box-sizing: border-box;
-  height: 30px;
-  width: 100%;
-
-  padding: 4px;
-  border-bottom: 2px solid #ddd;
-
-  color: #444;
-  background-color: #fff;
-
-}
-.monitor-panel-x {
-  content: 'x';
-
-  position: absolute;
-  right: 8px;
-  top: 8px;
-}
-.monitor-panel-module-header {
-  box-sizing: border-box;
-  width: 100%;
-
-  font-size: 13px;
-
-  padding: 2px 4px;
-  border-bottom: 1px solid #ddd;
-
-  color: #888;
-  background-color: #eee;
-}
-.monitor-panel-module {
-
-  box-sizing: border-box;
-  width: 100%;
-
-  padding: 2px 4px 12px 4px;
-
-  color: #444;
-  background-color: #eee;
-}
-.monitor-panel-module form { display: table; }
-.monitor-panel-module p { display: table-row; }
-.monitor-panel-module label { display: table-cell; text-align: right; padding: 0 6px; }
-.monitor-panel-module input { display: table-cell; text-align: right; box-sizing: border-box; width: 100%; }
-</style>
 <!-- kinematik.js -->
 <script>var kinematik = {};</script>
 
 
 <script type = 'text/javascript' src = 'kinematik.actuator.js'></script>
 <script type = 'text/javascript' src = 'kinematik.builder.js'></script>
-<script type = 'text/javascript' src = 'kinematik.monitor.js'></script>
 <script type = 'text/javascript' src = 'kinematik.js'></script>
 
 
@@ -122,7 +58,6 @@ h2 { font-size: 18px;}
 </head>
 <title>kinematik</title>
 <body>
- <b>kinematik</b>
  <div id="viewport-wrapper">
    <canvas id="viewport"></canvas>
  </div>

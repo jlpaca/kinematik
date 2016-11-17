@@ -20,7 +20,7 @@ var ModeManager = function(){
   this.keydownHandler = function(e){
     //e.preventDefault();
 
-    if(KEYCHART[e.which] === this.SWITCH_KEY){ //e.preventDefault();
+    if(KEYCHART[e.which] === this.SWITCH_KEY){ e.preventDefault();
         ++this.MODEINDEX;
         this.MODEINDEX %= this.MODELIST.length;
         this.MODE = this.MODELIST[this.MODEINDEX];

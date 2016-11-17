@@ -65,11 +65,19 @@ var ROBOT = new kinematik.KinematicLink({});
 ROBOT.extend({ joint: { q: [0, 0, 0.1, 1],    axis: [0, 0, 1, 1], /*range: [-Math.PI, Math.PI],*/ type: kinematik.JOINT_TYPE.REVOLUTE}});
 
 ROBOT.extend({ joint: { q: [0.14, 0, 0.2, 1], axis: [1, 0, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
+
+//ROBOT.extend({ joint: { q: [0.13, 0, 0.4, 1], axis: [0, 0, 1, 1], range: [-0.4, 0.4], type: kinematik.JOINT_TYPE.PRISMATIC}});
+
 ROBOT.extend({ joint: { q: [0.12, 0, 0.6, 1], axis: [1, 0, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.1, 0.6, 1],  axis: [0, 1, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.3, 0.6, 1],  axis: [1, 0, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.3, 0.6, 1],  axis: [0, 1, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.4, 0.6, 1],  axis: [0, 1, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
+
+//ROBOT.extend({ joint: { q: [0.2, 0, 0, 1],  axis: [1, 0, 0, 1], range: [-0.3, 0.3], type: kinematik.JOINT_TYPE.PRISMATIC}});
+//ROBOT.extend({ joint: { q: [0.4, 0, 0, 1],  axis: [0, 0, 1, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
+//ROBOT.extend({ joint: { q: [0.5, 0, 0, 1],  axis: [0, 0, 1, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
+
 
 
 ROBOT.initVisual({ scene: WORLD.webGL.scene }, true);
@@ -111,14 +119,6 @@ USER.input.init = function(){
   //kinematicActuator: control robot
   USER.input.kinematikActuator = new kinematik.Actuator({ kinematicLink: ROBOT });
   USER.input.kinematikActuator.listen(true);
-
-  //kinematikMonitor: gui tool
-  USER.input.kinematikMonitor = new kinematik.Monitor({
-    domParent: document.getElementById('viewport-wrapper'),
-    renderer: WORLD.webGL.renderer,
-    camera: WORLD.webGL.camera,
-    scene: WORLD.webGL.scene,
-    kinematicChain: ROBOT });
 
   //mode manager
   USER.input.modeManager = new ModeManager();
@@ -168,8 +168,6 @@ function timestep(){ t += dt;
 
   USER.input.kinematikActuator.update();
   USER.input.kinematikBuilder.update();
-
-  USER.input.kinematikMonitor.update();
 
   USER.input.cursor3D.update();
   USER.input.sphericalCameraControls.update();

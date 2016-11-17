@@ -28,8 +28,8 @@ kinematik.DenavitHartenberg.prototype.mat4 = function(){
 //the kinematicLink class is both link and chain
 //the kinematic chain is structured as a tree.
 kinematik.JOINT_TYPE = {};
-kinematik.JOINT_TYPE.REVOLUTE = 0;
-kinematik.JOINT_TYPE.PRISMATIC = 1;
+kinematik.JOINT_TYPE.REVOLUTE = 1;//0;
+kinematik.JOINT_TYPE.PRISMATIC = 2;//1;
 kinematik.KinematicLink = function (params){
   //create empty kinematic link object.
 
@@ -44,7 +44,7 @@ kinematik.KinematicLink = function (params){
 
   //joint type. Only revolute joints supported for now.
   this.jointType = params.type;
-  this.jointRange = null;
+  this.jointRange = [0, 0];
   //kinematic data
   this.frame = new frames.Frame();
   this.DH = new kinematik.DenavitHartenberg();
@@ -70,18 +70,17 @@ kinematik.KinematicLink.prototype.updateDataFromDH = function(propagate){
 };
 //actuate and increment: actuate joints by editing joint parameters
 kinematik.KinematicLink.prototype.actuate = function(v){
+  //clamp against joint limits;
+  v = Math.min(Math.max(
+      v, this.jointRange[0]), this.jointRange[1]);
   if(this.jointType === kinematik.JOINT_TYPE.REVOLUTE){
     //revolute joint, active joint parameter is DH.th
-
-    //clamp against joint limits;
-    v = Math.min(Math.max(
-        v, this.jointRange[0]), this.jointRange[1]);
     this.DH.th = v;
-    this.updateDataFromDH(true);
   } else if (this.jointType === kinematik.JOINT_TYPE.PRISMATIC){
+    //revolute joint, active joint parameter is DH.d
     this.DH.d = v;
-    this.updateDataFromDH(true);
   }
+  this.updateDataFromDH(true);
 };
 kinematik.KinematicLink.prototype.increment = function(dv){
   if(this.jointType === kinematik.JOINT_TYPE.REVOLUTE){
@@ -192,13 +191,23 @@ kinematik.KinematicLink.prototype.extend = function(params){
       1
     ];
 
-    //joint is without range limit unless
-    //otherwise specified
-    this.jointRange = [-Infinity, Infinity];
+    //since DH parameters after initialisation may be nonzero &
+    //joint ranges were specified w.r.t. initial configuration,
+    //update internal joint range limits.
+    this.jointRange[0] += (this.jointType === kinematik.JOINT_TYPE.REVOLUTE
+                          ? this.DH.th : this.DH.d);
+    this.jointRange[1] += (this.jointType === kinematik.JOINT_TYPE.REVOLUTE
+                          ? this.DH.th : this.DH.d);
+
+
+    //set child joint range. These are temp. values and
+    //will be updated when child is initialised.
+    this.child.jointRange = params.joint.range || [-Infinity, Infinity];
     if(params.joint.range){
-    this.jointRange = [this.DH.th+params.joint.range[0],
-                       this.DH.th+params.joint.range[1]];
+      this.child.jointRange = [params.joint.range[0], params.joint.range[1]];
     }
+
+
 
   } else {
     //OTHER METHODS OF SPECIFYING LINKAGES NOT SUPPORTED YET.
@@ -234,18 +243,21 @@ kinematik.KinematicLink.prototype.initVisual = function(params, propagate){
 
     //connect to parent frame if parent frame exists,
     //otherwise connect to origin (case for link 0)
+
+    /*
     var tip = VEC4.fromVec4inFrame(this.jointOffset, this.frame);
     var toe = [0, 0, 0, 1];
     if(this.parent instanceof kinematik.KinematicLink){
       toe = VEC4.fromVec4inFrame(this.parent.jointOffset, this.parent.frame);
     }
     var shaftLength = VEC4.mag(VEC4.sub(tip,toe));
+    */
 
-    //add shaft of appropriate length and cylinder(joint) to scene.
-    //not positioning and orienting them yet: to do that, call syncVisual()
+    //add shaft of appropirate thickness to scene.
+    //length will be scaled with the synVisual() method.
     this.visual.shaft = new THREE.Mesh(
       new THREE.CubeGeometry(this.visual.SHAFT_THICKNESS,
-                             this.visual.SHAFT_THICKNESS, shaftLength),
+                             this.visual.SHAFT_THICKNESS, 1),
       this.visual.MATERIAL); scene.add(this.visual.shaft);
 
     this.visual.tipJoint = new THREE.Mesh(
@@ -286,7 +298,8 @@ kinematik.KinematicLink.prototype.syncVisual = function(propagate){
   }
   var shaftVector = VEC4.sub(tip,toe);
   var shaftCentre = VEC4.mul(0.5, VEC4.add(tip, toe));
-
+  var shaftLength = VEC4.mag(shaftVector);
+  this.visual.shaft.scale.set(1, 1, shaftLength+this.visual.SHAFT_THICKNESS);
   this.visual.shaft.position.fromArray(shaftCentre);
   var shaftUp = Math.abs(VEC4.dot(shaftVector, this.frame.z))
               > Math.abs(VEC4.dot(shaftVector, this.frame.x)) ?
@@ -390,14 +403,29 @@ kinematik.dampedLeastSquares = function(params){
 
     //if error is still large, continue with a DLS iteration
     for(var i = 0; i < targi; ++i){ j = i+1;
-      var zxd = VEC4.x(L[i].frame.z,
-                VEC4.sub(L[targi].frame.o, L[i].frame.o));
-      J[0][i] = zxd[0];
-      J[1][i] = zxd[1];
-      J[2][i] = zxd[2];
-      J[3][i] = L[i].frame.z[0];
-      J[4][i] = L[i].frame.z[1];
-      J[5][i] = L[i].frame.z[2];
+
+      if(L[j].jointType === kinematik.JOINT_TYPE.REVOLUTE){
+
+        var zxd = VEC4.x(L[i].frame.z,
+                  VEC4.sub(L[targi].frame.o, L[i].frame.o));
+
+        J[0][i] = zxd[0];
+        J[1][i] = zxd[1];
+        J[2][i] = zxd[2];
+        J[3][i] = L[i].frame.z[0];
+        J[4][i] = L[i].frame.z[1];
+        J[5][i] = L[i].frame.z[2];
+
+      } else if (L[j].jointType === kinematik.JOINT_TYPE.PRISMATIC){
+        J[0][i] = L[i].frame.z[0];//zxd[0];
+        J[1][i] = L[i].frame.z[1];//zxd[1];
+        J[2][i] = L[i].frame.z[2];//zxd[2];
+        J[3][i] = 0;//L[i].frame.z[0];
+        J[4][i] = 0;//L[i].frame.z[1];
+        J[5][i] = 0;//L[i].frame.z[2];
+      } else {
+        console.log('weh');
+      }
     }
     var Jt = numeric.transpose(J);
 

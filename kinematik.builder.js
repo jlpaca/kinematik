@@ -27,7 +27,6 @@ kinematik.Builder = function(params){
 
       //add to keyboard control map & monitor
       USER.input.kinematikActuator.mapKinematicLink();
-      USER.input.kinematikMonitor.mapKinematicLink();
     }
   }
 

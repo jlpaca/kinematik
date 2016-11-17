@@ -67,7 +67,9 @@ kinematik.Monitor.prototype.initPanel = function(params, propagate){
   newPanel.domElement.className = 'monitor-panel';
 
   newPanel.domElement.style.left    = newPanel.x + 'px';
-  newPanel.domElement.style.top     = newPanel.y + 'px';
+  newPanel.domElement.style.top     = this.domParent.clientHeight
+                                      - newPanel.y
+                                      - newPanel.h + 'px';
   newPanel.domElement.style.width   = newPanel.w + 'px';
   newPanel.domElement.style.height  = newPanel.h + 'px';
 
@@ -101,7 +103,7 @@ kinematik.Monitor.prototype.initPanel = function(params, propagate){
 
   '<p><label for="DH'+newPanel.i+'-d">d</label>'+
   '<input type="number" step="0.2" id="DH'+newPanel.i+'-d" ' +
-  'disabled name="DH'+newPanel.i+'-d"></p>' +
+  'name="DH'+newPanel.i+'-d"></p>' +
 
   '<p><label for="DH'+newPanel.i+'-th">&#952;</label>'+
   '<input type="number" step="0.2" id="DH'+newPanel.i+'-th" ' +
@@ -110,12 +112,15 @@ kinematik.Monitor.prototype.initPanel = function(params, propagate){
 
   '<p><label for="DH'+newPanel.i+'-d">r</label>'+
   '<input type="number" step="0.2" id="DH'+newPanel.i+'-r" ' +
-  'disabled name="DH'+newPanel.i+'-r"></p>' +
+  'name="DH'+newPanel.i+'-r"></p>' +
 
   '<p><label for="DH'+newPanel.i+'-alf">&#945;</label>'+
   '<input type="number" step="0.2" id="DH'+newPanel.i+'-alf" ' +
-  'disabled name="DH'+newPanel.i+'-alf"></p>' +
+  'name="DH'+newPanel.i+'-alf"></p>' +
   '</form>';
+
+  newPanel.EDIT_FLAG = true;
+  //when flag is raised, panel governs update.
 
   newPanel.domElement.appendChild(domModuleDHheader);
   newPanel.domElement.appendChild(domModuleDH);
@@ -125,6 +130,23 @@ kinematik.Monitor.prototype.initPanel = function(params, propagate){
   this.domParent.appendChild(newPanel.domElement);
 
   //generate & attach handlers
+  newPanel.setInputMode = function(mode){
+    var dthralf = [true, true, true, true];
+    if(mode.toUpperCase() === 'FK'){
+      //enable editing joint parameters
+      dthralf[1] = false;
+    } else if (mode.toUpperCase() === 'IK') {
+      //disable all
+
+    } else if (mode.toUpperCase() === 'B') {
+      //enable all
+      dthralf = [false, false, false, false];
+    }
+    document.getElementById('DH'+newPanel.i+'-d').disabled = dthralf[0];
+    document.getElementById('DH'+newPanel.i+'-th').disabled = dthralf[1];
+    document.getElementById('DH'+newPanel.i+'-r').disabled = dthralf[2];
+    document.getElementById('DH'+newPanel.i+'-alf').disabled = dthralf[3];
+  }
   newPanel.startDrag = function(e){ //e.preventDefault();
 
     //NON-MODULAR SUPPRESOR to prevent
@@ -183,10 +205,17 @@ kinematik.Monitor.prototype.update = function(force){
   //update monitor display
 
   for(var i = 0; i < this.panel.length; ++i){
-    document.getElementById('DH'+(i+1)+'-d').value = this.panel[i].kinematicLink.DH.d.toFixed(3);
-    document.getElementById('DH'+(i+1)+'-th').value = this.panel[i].kinematicLink.DH.th.toFixed(3);
-    document.getElementById('DH'+(i+1)+'-r').value = this.panel[i].kinematicLink.DH.r.toFixed(3);
-    document.getElementById('DH'+(i+1)+'-alf').value = this.panel[i].kinematicLink.DH.alf.toFixed(3);
+    if(this.panel[i].EDIT_FLAG){
+      this.panel[i].kinematicLink.DH.d = document.getElementById('DH'+(i+1)+'-d').value;
+      this.panel[i].kinematicLink.DH.th = document.getElementById('DH'+(i+1)+'-th').value;
+      this.panel[i].kinematicLink.DH.r = document.getElementById('DH'+(i+1)+'-r').value;
+      this.panel[i].kinematicLink.DH.alf =document.getElementById('DH'+(i+1)+'-alf').value;
+    } else {
+      document.getElementById('DH'+(i+1)+'-d').value = this.panel[i].kinematicLink.DH.d.toFixed(3);
+      document.getElementById('DH'+(i+1)+'-th').value = this.panel[i].kinematicLink.DH.th.toFixed(3);
+      document.getElementById('DH'+(i+1)+'-r').value = this.panel[i].kinematicLink.DH.r.toFixed(3);
+      document.getElementById('DH'+(i+1)+'-alf').value = this.panel[i].kinematicLink.DH.alf.toFixed(3);
+    }
   }
 
 
@@ -202,6 +231,10 @@ kinematik.Monitor.prototype.mapKinematicLink = function(params){
       //found a link without existing panel
       this.initPanel({kinematicLink: r}, false);
     }
+    document.getElementById('DH'+(i+1)+'-d').value = this.panel[i].kinematicLink.DH.d.toFixed(3);
+    document.getElementById('DH'+(i+1)+'-th').value = this.panel[i].kinematicLink.DH.th.toFixed(3);
+    document.getElementById('DH'+(i+1)+'-r').value = this.panel[i].kinematicLink.DH.r.toFixed(3);
+    document.getElementById('DH'+(i+1)+'-alf').value = this.panel[i].kinematicLink.DH.alf.toFixed(3);
     ++i
   }
 
