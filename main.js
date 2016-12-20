@@ -62,23 +62,15 @@ WORLD.webGL.init = function(){
 var ROBOT = new kinematik.KinematicLink({});
 
 
-ROBOT.extend({ joint: { q: [0, 0, 0.1, 1],    axis: [0, 0, 1, 1], /*range: [-Math.PI, Math.PI],*/ type: kinematik.JOINT_TYPE.REVOLUTE}});
+ROBOT.extend({ joint: { q: [0, 0, 0.1, 1],    axis: [0, 0, 1, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 
 ROBOT.extend({ joint: { q: [0.14, 0, 0.2, 1], axis: [1, 0, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
-
-//ROBOT.extend({ joint: { q: [0.13, 0, 0.4, 1], axis: [0, 0, 1, 1], range: [-0.4, 0.4], type: kinematik.JOINT_TYPE.PRISMATIC}});
 
 ROBOT.extend({ joint: { q: [0.12, 0, 0.6, 1], axis: [1, 0, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.1, 0.6, 1],  axis: [0, 1, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.3, 0.6, 1],  axis: [1, 0, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.3, 0.6, 1],  axis: [0, 1, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
 ROBOT.extend({ joint: { q: [0, 0.4, 0.6, 1],  axis: [0, 1, 0, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
-
-//ROBOT.extend({ joint: { q: [0.2, 0, 0, 1],  axis: [1, 0, 0, 1], range: [-0.3, 0.3], type: kinematik.JOINT_TYPE.PRISMATIC}});
-//ROBOT.extend({ joint: { q: [0.4, 0, 0, 1],  axis: [0, 0, 1, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
-//ROBOT.extend({ joint: { q: [0.5, 0, 0, 1],  axis: [0, 0, 1, 1], type: kinematik.JOINT_TYPE.REVOLUTE}});
-
-
 
 ROBOT.initVisual({ scene: WORLD.webGL.scene }, true);
 ROBOT.syncVisual(true);

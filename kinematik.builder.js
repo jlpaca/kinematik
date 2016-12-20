@@ -28,6 +28,15 @@ kinematik.Builder = function(params){
       //add to keyboard control map & monitor
       USER.input.kinematikActuator.mapKinematicLink();
     }
+    if(KEYCHART[e.which] === 'DELETE'){
+	  /*
+	console.log('reset');
+	var resetROBOT = new kinematik.KinematicLink();
+	this.kinematicLink = resetROBOT;
+	USER.input.kinematikActuator.mapKinematicLink();
+    	*/
+	    window.location.reload();
+	}
   }
 
   window.addEventListener('keydown', this.keydownHandler.bind(this));
