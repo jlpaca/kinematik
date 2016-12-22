@@ -32,7 +32,7 @@ This repository is hosted on github pages [here](https://jhjuhn.github.io/kinema
 
 ### Forwards Kinematics Mode
 * 1 thru 9: actuate joints +
-* A thru L: actuate joints *
+* A thru L: actuate joints -
 * SHIFT: slow down actuation speed
 
 ### Inverse Kinematics Mode
