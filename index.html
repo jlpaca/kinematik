@@ -26,10 +26,178 @@ canvas { display: block; }
 <script src="frame.js"></script>
 
 <script>
+var KINEMATIK_JOINTTYPE_REVOLUTE = 1;
+var KINEMATIK_JOINTTYPE_PRISMATIC = 2;
+
 var kinematik = {};
 
 
+// KinematicChain:	constructor for kinematic chain object.
+//
+//			members:
+//
+//			links:	an array of links belonging
+//				to this kinematic chain.
 
+kinematik.KinematicChain = function(){
+	this.links = [];
+	return this;
+}
+
+// pushlink:	appends a new link to the end of the current kinematic chain,
+//		and sets its prev member appropriately. This is the advised
+//		method to add links to the chain.
+
+kinematik.KinematicChain.prototype.pushlink = function(){
+	this.links.push(new kinematik.KinematicLink());
+
+	this.links[this.links.length-1].prev = 
+	this.links[this.links.length-2];
+}
+
+// poplink:	removes the last link from the kinematic chain. Note that this
+//		function does not consider the representation of the link, and
+//		visual_remove should be called on the link to be removed before
+//		this function removes the data to prevent garbage from remaining
+//		on the scene.
+
+kinematik.KinematicChain.prototype.poplink = function(){
+	this.links.pop();
+}
+
+
+// data_fromDH:	works pretty much the same way as KinematicLink.data_fromDH.
+//		calls data_fromDH for each link in the correct sequence for
+//		propagation of transformations. Optionally newDHlist, an
+//		array of DenavitHartenberg objects, may be supplied, in which
+//		case the function will pass the i-th element in that list as
+//		the argument when calling KinematicLink.data_fromDH on the i-th
+//		link.
+
+kinematik.KinematicChain.prototype.data_fromDH = function(newDHlist){
+	for (var i = 0; i < this.links.length; ++i) {
+	this.links[i].data_fromDH(
+		(newDHlist && newDHlist[i] instanceof DenavitHartenberg) ?
+		newDHlist[i] : null
+		);
+	}	
+}
+
+// visual_init:	create objects to form visual representations of each link of
+//		the kinematic chain.
+
+kinematik.KinematicChain.prototype.visual_init = function(camera, renderer, scene){
+	for (var i = 0; i < this.links.length; ++i) {
+	this.links[i].visual_init(camera, renderer, scene);
+	}
+}
+
+// visual_sync:	updates position and orientation of visual representation
+
+kinematik.KinematicChain.prototype.visual_sync = function(){
+	for (var i = 0; i < this.links.length; ++i) {
+	this.links[i].visual_sync();
+	}
+}
+
+
+
+// KinematicLink:	constructor for kinematic link object to be included
+//			in a kinematic chain.
+//
+//			assuming it is the 0-indexed i-th link in chain, and
+//			is therefore moved by the 1-indexed i-th joint, and
+//			associated with	the 0-indexed i-th frame.
+//
+//			jointtype: either revolute or prismatic.
+//
+//			DH:	Denavit-Hartenberg parameters.
+//
+//			prev:	previous link. Maintained by user effort - it is
+//				encouraged to always carry out link operations on
+//				kinematicChain level to prevent this from breaking.
+//
+//			frame:	object representing frame i.
+//
+//			T:	the 4-matrix T_i, which gives the transformation
+//				from the inertial frame at origin to frame i.
+//
+//			A:	the 4-matrix A_i, which gives transformation from
+//				frame i-1 to frame i. Notice that we have T_i =
+//				T_{i-1} A_i.
+//
+
+kinematik.KinematicLink = function(){
+	this.jointtype = KINEMATIK_JOINTTYPE_REVOLUTE;
+
+	this.prev = null;
+
+	this.DH = new DenavitHartenberg();
+	this.frame = new Frame();
+
+	this.T = numeric.identity(4);
+	this.A = numeric.identity(4);
+
+	this.visual = null;
+	return this;
+}
+
+
+// data_fromDH:	sets the DH member to newDH if supplied. Then updates all the
+//		other members to agree with DH.
+//
+//		this function requires the prev member to be properly set.
+
+kinematik.KinematicLink.prototype.data_fromDH = function(newDH){
+
+	if (newDH instanceof DenavitHartenberg) { this.DH = newDH; }
+
+	this.A = this.DH.tomat4();
+	this.T = this.A;
+	if (this.prev instanceof kinematik.KinematicLink) {
+		this.T = numeric.dot(
+		this.prev.T, this.A);
+	}
+	this.frame.transform_mat4set(this.T);
+}
+
+
+// visual_init:	creates webGL objects for visual representation of link and
+//		adds them to the scene.
+
+kinematik.KinematicLink.prototype.visual_init = function(camera, renderer, scene){
+	if (this.visual !== null) {
+		console.log("! repeated call to visual_init");
+		return;
+	}
+
+	this.visual = {};
+	this.frame.visual_init(camera, renderer, scene);
+}
+
+
+// visual_sync:	updates the position and orientation of visual representation
+//		to reflect the sate of the link.
+
+kinematik.KinematicLink.prototype.visual_sync = function(){
+	if (this.visual === null) {
+		console.log("! call to visual_sync without initialised visual");
+		return;
+	}
+	this.frame.visual_sync();
+}
+
+
+// visual_remove:	removes the visual representation from the scene, deletes
+//			the relevant objects, and sets visual back to null.
+
+kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, scene){
+	if (this.visual === null) {
+		console.log("! call to visual_remove without initialised visual");
+		return;
+	}
+	this.frame.visual_remove(camera, renderer, scene);
+}
 
 </script>
 
@@ -57,22 +225,27 @@ function initTHREE(){
 	renderer = new THREE.WebGLRenderer();
 	scene = new THREE.Scene();
 
+	var refplane = new THREE.Mesh(
+			new THREE.PlaneGeometry(1, 1),
+			new THREE.MeshBasicMaterial({ color: 0x333333 }));
+	scene.add(refplane);
+
 	// append canvas to document
 	document.body.appendChild(renderer.domElement);
 
 }
 
-var f1, f2;
+var manipulator = null;
 function init(){
-	// initialise webGL things.
-	initTHREE();
+	initTHREE(); // init webGL things
 
-	// initialise kinematik.	
-	f1 = new Frame();
-	f1.visual_init(camera, renderer, scene);
+	manipulator = new kinematik.KinematicChain();
+	manipulator.pushlink();
+	manipulator.pushlink();
+	manipulator.links[0].data_fromDH(new DenavitHartenberg(0, Math.PI/6, 0, 0));
+	manipulator.links[1].data_fromDH(new DenavitHartenberg(1, 0, 0, 0));
 
-	f2 = new Frame();
-	f2.visual_init(camera, renderer, scene);
+	manipulator.visual_init(camera, renderer, scene);
 	
 
 	orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
@@ -92,10 +265,9 @@ function render(){
 var _t = 0;
 function timestep(){
 	_t += 0.01;
-	f1.visual_sync();
 
-	f2.transform_mat4set(new DenavitHartenberg(0, 0, 0, 0).tomat4());
-	f2.visual_sync();
+	manipulator.data_fromDH([null, new DenavitHartenberg(1, _t, 0, 0)]);
+	manipulator.visual_sync();
 
 	requestAnimationFrame(timestep);
 

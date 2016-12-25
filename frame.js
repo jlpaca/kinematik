@@ -6,7 +6,7 @@ var FRAME_MATERIAL_G = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 var FRAME_MATERIAL_B = new THREE.MeshBasicMaterial({ color: 0x0000ff });
 
 var FRAME_GEOMETRY_AXIS_LENGTH = 1;
-var FRAME_GEOMETRY_CONE_HEIGHT = FRAME_GEOMETRY_AXIS_LENGTH*0.4;
+var FRAME_GEOMETRY_CONE_HEIGHT = FRAME_GEOMETRY_AXIS_LENGTH*0.3;
 var FRAME_GEOMETRY_CONE_THICKNESS = FRAME_GEOMETRY_AXIS_LENGTH*0.07;
 var FRAME_GEOMETRY_CYLINDER_HEIGHT = FRAME_GEOMETRY_AXIS_LENGTH-FRAME_GEOMETRY_CONE_HEIGHT;
 var FRAME_GEOMETRY_CYLINDER_THICKNESS = FRAME_GEOMETRY_AXIS_LENGTH*0.02;
@@ -35,6 +35,9 @@ function Frame(){
 		[0, 1, 0, 1],
 		[0, 0, 1, 1]
 		];
+
+	this.visual = null;
+
 	return this;	
 }
 
@@ -46,7 +49,7 @@ function Frame(){
 
 Frame.prototype.visual_init = function(camera, renderer, scene){
 	// guard against repeated calls to prevent leaving garbage objects in scene.
-	if (this.visual !== undefined) {
+	if (this.visual !== null) {
 		console.log("! repeated call to visual_init");
 		return;
 	}
@@ -76,8 +79,8 @@ Frame.prototype.visual_init = function(camera, renderer, scene){
 
 Frame.prototype.visual_sync = function() {
 	// guard against updates before the representations have been created.
-	if (!this.visual) {
-		console.log("! visual_sync called before visual_init");
+	if (this.visual === null) {
+		console.log("! call to visual_sync without initialised visual");
 		return;
 	}
 	var j = 0;
@@ -108,6 +111,24 @@ Frame.prototype.visual_sync = function() {
 			this.o[2]+(this.axis[j][2]+this.axis[i][2])*offsetcylinder)
 			);
 	}
+}
+
+
+// visual_remove:	removes the representation of the object from the scene,
+// 			deletes the related objects, and sets the visual member
+// 			to null.
+
+Frame.prototype.visual_remove = function(camera, renderer, scene) {
+	if (this.visual === null) {
+		console.log("! call to visual_remove without initialised visual");
+		return;
+	}
+
+	for (var i = 0; i < 3; ++i) {
+		scene.remove(this.visual.axis[i].cone);
+		scene.remove(this.visual.axis[i].cylinder);
+	}
+	this.visual = null;
 }
 
 
