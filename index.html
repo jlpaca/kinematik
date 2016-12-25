@@ -14,192 +14,21 @@ html, body {
 canvas { display: block; }
 </style>
 
+<!-- external libraries -->
 <script src="three.min.js"></script>
-<script src="three.orbitcontrols.js"></script>
 <script src="numeric-1.2.6.min.js"></script>
-<!-- vec4.js -->
+
+
+<script src="three.orbitcontrols.js"></script>
+
+<script src="v4.js"></script>
+<script src="denavithartenberg.js"></script>
+<script src="frame.js"></script>
+
 <script>
-// adds functions to Array object for vector arithmetic.
-function v4add(u, v){ return [u[0]+v[0], u[1]+v[1], u[2]+v[2], 1]; }
-function v4sub(u, v){ return [u[0]-v[0], u[1]-v[1], u[2]-v[2], 1]; }
-function v4mul(a, v){ return [a*v[0], a*v[1], a*v[2], 1]; }
-
-Array.prototype.v4add = function(v){
-	this[0] += v[0]; this[1] += v[1];
-	this[2] += v[2]; this[3] = 1;
-	return this;
-}
-Array.prototype.v4sub = function(v){
-	this[0] -= v[0]; this[1] -= v[1];
-	this[2] -= v[2]; this[3] = 1;
-	return this;
-}
-Array.prototype.v4mul = function(a){
-	this[0] *= a; this[1] *= a;
-	this[2] *= a; this[3] = 1;
-	return this;
-}
-
-</script>
-
-<!-- denavithartenberg.js -->
-<script>
-// returns a Denavit-Hartenberg param object.
-function DH(d, t, r, a){
-	this.d = d || 0; this.t = t || 0;
-	this.r = r || 0; this.a = a || 0;
-	return this;
-}
-DH.prototype.tomat4 = function(){
-	return [
-		[ Math.cos(this.t), -Math.sin(this.t)*Math.cos(this.a),
-		  Math.sin(this.t)*Math.sin(this.a), this.r*Math.cos(this.t)],
-		[ Math.sin(this.t),  Math.cos(this.t)*Math.cos(this.a),
-		 -Math.cos(this.t)*Math.sin(this.a), this.r*Math.sin(this.t)],
-		[0, Math.sin(this.a), Math.cos(this.a), this.d],
-		[0, 0, 0, 1]
-	];
-}
-
-</script>
-
-<!-- frame.js -->
-<script>
-
-// some constants that determine the appearance of the webGL visual representation
-// of the coordinate frame.
-
-var FRAME_MATERIAL_R = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-var FRAME_MATERIAL_G = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-var FRAME_MATERIAL_B = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-
-var FRAME_GEOMETRY_AXIS_LENGTH = 1;
-var FRAME_GEOMETRY_CONE_HEIGHT = FRAME_GEOMETRY_AXIS_LENGTH*0.4;
-var FRAME_GEOMETRY_CONE_THICKNESS = FRAME_GEOMETRY_AXIS_LENGTH*0.1;
-var FRAME_GEOMETRY_CYLINDER_HEIGHT = FRAME_GEOMETRY_AXIS_LENGTH-FRAME_GEOMETRY_CONE_HEIGHT;
-var FRAME_GEOMETRY_CYLINDER_THICKNESS = FRAME_GEOMETRY_AXIS_LENGTH*0.03;
-
-var FRAME_GEOMETRY_CONE = new THREE.ConeGeometry(
-		FRAME_GEOMETRY_CONE_THICKNESS,
-		FRAME_GEOMETRY_CONE_HEIGHT, 8);
-var FRAME_GEOMETRY_CYLINDER = new THREE.CylinderGeometry(
-		FRAME_GEOMETRY_CYLINDER_THICKNESS,
-		FRAME_GEOMETRY_CYLINDER_THICKNESS,
-		FRAME_GEOMETRY_CYLINDER_HEIGHT, 8);
+var kinematik = {};
 
 
-// Frame:	constructor for Frame object.
-//
-//		o(4-vector) is the origin
-//		axis(3-array of 4-vectors) are the basis vectors.
-//
-//		the members of axes are to be maintained by user effort
-//		to always be a unit 3-vector and a 4th element 1.
-
-function Frame(){
-	this.o = [0, 0, 0, 1];
-	this.axis = [
-		[1, 0, 0, 1],
-		[0, 1, 0, 1],
-		[0, 0, 1, 1]
-		];
-	return this;	
-}
-
-
-// visual_init:	creates webGL objects to represent the frame in a webGL context
-//		as specified by parameters passed in. (camera, renderer, and scene
-//		are always passed, in that order, to functions that require any one
-//		of those as parameters, for consistency).
-
-Frame.prototype.visual_init = function(camera, renderer, scene){
-	// guard against repeated calls to prevent leaving garbage objects in scene.
-	if (this.visual !== undefined) {
-		console.log("! repeated call to visual_init");
-		return;
-	}
-
-	// naming convention: [object].[property] has [object].visual.[property] as
-	// visual representation in scene. visual may contain more than one part.
-	this.visual = {};
-	this.visual.axis = [
-		{ cone: new THREE.Mesh(FRAME_GEOMETRY_CONE, FRAME_MATERIAL_R),
-		  cylinder: new THREE.Mesh(FRAME_GEOMETRY_CYLINDER, FRAME_MATERIAL_R) },
-		{ cone: new THREE.Mesh(FRAME_GEOMETRY_CONE, FRAME_MATERIAL_G),
-		  cylinder: new THREE.Mesh(FRAME_GEOMETRY_CYLINDER, FRAME_MATERIAL_G) },
-		{ cone: new THREE.Mesh(FRAME_GEOMETRY_CONE, FRAME_MATERIAL_B),
-		  cylinder: new THREE.Mesh(FRAME_GEOMETRY_CYLINDER, FRAME_MATERIAL_B) }
-	];
-
-	for (var i = 0; i < 3; ++i){
-		scene.add(this.visual.axis[i].cone);
-		scene.add(this.visual.axis[i].cylinder);
-	}
-	return;
-}
-
-
-// visual_sync: updates position and orientation of webGL representation to
-//		reflect current origin and unit vectors.
-
-Frame.prototype.visual_sync = function() {
-	// guard against updates before the representations have been created.
-	if (!this.visual) {
-		console.log("! visual_sync called before visual_init");
-		return;
-	}
-	var j = 0;
-	var offsetcone = FRAME_GEOMETRY_CYLINDER_HEIGHT+FRAME_GEOMETRY_CONE_HEIGHT/2;
-	var offsetcylinder = FRAME_GEOMETRY_CYLINDER_HEIGHT/2;
-	for (var i = 0; i < 3; ++i) {
-		j = (i+1 == 3) ? 0 : i+1;
-		this.visual.axis[i].cone.position.set(
-			this.o[0]+this.axis[i][0]*offsetcone,
-			this.o[1]+this.axis[i][1]*offsetcone,
-			this.o[2]+this.axis[i][2]*offsetcone);
-		this.visual.axis[i].cone.up.fromArray(this.axis[i]);
-		this.visual.axis[i].cone.lookAt(
-			new THREE.Vector3(
-			this.o[0]+(this.axis[j][0]+this.axis[i][0])*offsetcone,
-			this.o[1]+(this.axis[j][1]+this.axis[i][1])*offsetcone,
-			this.o[2]+(this.axis[j][2]+this.axis[i][2])*offsetcone));
-
-		this.visual.axis[i].cylinder.position.set(
-			this.o[0]+this.axis[i][0]*offsetcylinder,
-			this.o[1]+this.axis[i][1]*offsetcylinder,
-			this.o[2]+this.axis[i][2]*offsetcylinder);
-		this.visual.axis[i].cylinder.up.fromArray(this.axis[i]);
-		this.visual.axis[i].cylinder.lookAt(
-			new THREE.Vector3(
-			this.o[0]+(this.axis[j][0]+this.axis[i][0])*offsetcylinder,
-			this.o[1]+(this.axis[j][1]+this.axis[i][1])*offsetcylinder,
-			this.o[2]+(this.axis[j][2]+this.axis[i][2])*offsetcylinder)
-			);
-	}
-}
-
-
-// tansform_mat4push:	takes a 4*4 matrix and applies that transformation to
-//			the frame. Note that repeated calls to this function
-//			apply a series of transformations in sequence.
-
-Frame.prototype.transform_mat4push = function(T) {
-	var newo = numeric.dot(T, this.o);
-	for (var i = 0; i < 3; ++i) {
-	this.axis[i] = numeric.dot(T, v4add(this.o, this.axis[i])).v4sub(newo);
-	}
-	this.o = newo;
-}
-
-
-// transform_mat4set:	takes a 4*4 matrix set the frame to coincide with the
-//			result of applying that transformation to the inertial
-//			frame (origin 0 and standard unit basis).
-
-Frame.prototype.transform_mat4set = function(T) {
-	for (var j = 0; j < 3; ++j) { this.o[j] = T[j][3];
-	for (var i = 0; i < 3; ++i) { this.axis[i][j] = T[j][i]; }}
-}
 
 
 </script>
@@ -214,15 +43,21 @@ var scene;
 var orbitcontrols;
 
 function initTHREE(){
+	// initialise camera
 	camera = new THREE.PerspectiveCamera(
 		45,
 		window.innerWidth/window.innerHeight,
 		0.1, 1000 );
+	
+	// initial position of camera
 	camera.up.set(0, 0, 1);
-	camera.position.z = 1;
+	camera.position.z = 10;
 
+	// initialise renderer and scene
 	renderer = new THREE.WebGLRenderer();
 	scene = new THREE.Scene();
+
+	// append canvas to document
 	document.body.appendChild(renderer.domElement);
 
 }
@@ -231,7 +66,8 @@ var f1, f2;
 function init(){
 	// initialise webGL things.
 	initTHREE();
-		
+
+	// initialise kinematik.	
 	f1 = new Frame();
 	f1.visual_init(camera, renderer, scene);
 
@@ -242,25 +78,25 @@ function init(){
 	orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
 }
 
-var time = 0;
 function render(){
-	time+=0.01;
-	// adjust camera and renderer to conform to viewport size change.
+	// adjust camera and renderer in response to any viewport size change.
 	camera.aspect = window.innerWidth/window.innerHeight;
 	camera.updateProjectionMatrix();
 
 	renderer.setSize(window.innerWidth, window.innerHeight);
 
-	f1.visual_sync();
-
-	f2.transform_mat4set(new DH(0, 0, 0, 0).tomat4());
-	f2.visual_sync();
-
 	// render the scene as seen through camera.
 	renderer.render(scene, camera);
 }
 
+var _t = 0;
 function timestep(){
+	_t += 0.01;
+	f1.visual_sync();
+
+	f2.transform_mat4set(new DenavitHartenberg(0, 0, 0, 0).tomat4());
+	f2.visual_sync();
+
 	requestAnimationFrame(timestep);
 
 	render();
