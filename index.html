@@ -162,6 +162,30 @@ kinematik.KinematicLink.prototype.data_fromDH = function(newDH){
 }
 
 
+// data_fromjoint:	calculates the DH parameters from the location of the
+//			joint, given in world coordinates, and information of
+//			the previous joint.
+
+kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
+	if (!newjoint) {
+		console.log("! invalid joint object");
+		return;
+	}
+}
+
+// actuate:	updates appropriate joint parameter (theta for revolute, d for
+//		prismatic joints) to jparam, and calls data_fromDH to update
+//		all the data.
+
+kinematik.KinematicLink.prototype.actuate = function(jparam){
+	if (this.jointtype === KINEMATIK_JOINTTYPE_REVOLUTE) { this.DH.t = jparam; }
+	else if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) { this.DH.d = jparam; }
+	else { console.log("! unknown joint type."); return; }
+
+	this.data_fromDH();	
+}
+
+
 // visual_init:	creates webGL objects for visual representation of link and
 //		adds them to the scene.
 
@@ -242,8 +266,8 @@ function init(){
 	manipulator = new kinematik.KinematicChain();
 	manipulator.pushlink();
 	manipulator.pushlink();
-	manipulator.links[0].data_fromDH(new DenavitHartenberg(0, Math.PI/6, 0, 0));
-	manipulator.links[1].data_fromDH(new DenavitHartenberg(1, 0, 0, 0));
+	//manipulator.links[0].data_fromDH(new DenavitHartenberg(0, Math.PI/6, 0, 0));
+	//manipulator.links[1].data_fromDH(new DenavitHartenberg(1, 0, 0, 0));
 
 	manipulator.visual_init(camera, renderer, scene);
 	
@@ -266,7 +290,9 @@ var _t = 0;
 function timestep(){
 	_t += 0.01;
 
-	manipulator.data_fromDH([null, new DenavitHartenberg(1, _t, 0, 0)]);
+	manipulator.links[1].actuate(_t);
+
+	manipulator.data_fromDH();
 	manipulator.visual_sync();
 
 	requestAnimationFrame(timestep);
