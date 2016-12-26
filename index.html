@@ -183,17 +183,17 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 	var prevframe = this.prev instanceof kinematik.KinematicLink ?
 			this.prev.frame : new Frame();
 
-	console.log(newjoint.jointaxis.v4unit());
+	//console.log(newjoint.jointaxis.v4unit());
 
 	// calculate D-H parameters
 	var d = 0;
 	var t = 0;
 	var r = 0;
 	var a = 0;
-	var z_n = newjoint.jointaxis.v4unit();
+	newjoint.jointaxis.v4unit();
 
 	// check for integrity of the specification for the new axis.
-	if (z_n.v4epsilon()) {
+	if (newjoint.jointaxis.v4epsilon()) {
 		console.log("! joint axis has zero norm");
 		return;
 	}
@@ -201,13 +201,17 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 	// case : z_n-1 and z_n are parallel.
 	//
 	// -	the choice of d is arbitrary and we set it to 0.
+	//
 	// -	x_n is in the direction of the common normal, pointing from
 	//	z_n to z_n-1 and t can be calculated accordingly. If the
 	//	common normal vanishes, x_n = x_n-1 and t = 0;
-	// -	r is calculated from the magnitude of the common normal.
+	//
+       	// -	r is calculated from the magnitude of the common normal.
+	//
 	// -	a is zero since z_n-1 // z_n.
+	//
 
-	if (v4x(prevframe.axis[2], z_n).v4epsilon()) {
+	if (v4x(prevframe.axis[2], newjoint.jointaxis).v4epsilon()) {
 		console.log("parallel.");
 
 		var normalvector = v4sub(
@@ -228,8 +232,50 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 			r = -normalvector.v4mag();
 		}
 		a = 0;
-		
-	} else {
+	}
+	// case: z_n-1 and z_n are not parallel.
+	//
+	// -	d is the offset along z_n-1 to endpoint of common normal. This
+	//	involves solving an equation for the endpoints.
+	//
+	// -	x_n is, as in the parallel case, the direction of the common normal
+	//	pointing from z_n to z_n-1
+	// -	r is calculated the magnitude from the common normal.
+	// -	
+
+	else {
+		var diffvector = v4sub(newjoint.jointlocation, prevframe.o);
+		var normalvector = v4projontovector(diffvector,
+				v4x(newjoint.jointaxis, prevframe.axis[2])
+				);	
+
+		// solving the equations.
+		// (diffvector + k z_n - d z_n-1) . z_n-1 = 0
+		// (diffvector + k z_n - d z_n-1) . z_n   = 0
+		// we need only d so matrix shenanigans will probably
+		// be overkill.
+
+		var z_n = newjoint.jointaxis;
+		var z_0 = prevframe.axis[2];
+
+		// so here. have a manual gaussian elimination.
+
+		var factor = v4dot(z_n, z_0)/v4dot(z_n, z_n);
+		d = (v4dot(diffvector, z_0) - factor*v4dot(diffvector, z_n))/
+		(v4dot(z_0, z_0) - factor*v4dot(z_n, z_0));
+
+		// if the normal vector vanishes, the two axes coincide.
+		if (normalvector.v4epsilon()) {
+			t = v4ang(prevframe.axis[0], prevframe.axis[2]);
+			r = 0;
+			a = v4ang(z_n, z_0);
+		} else {
+			t = v4ang(normalvector,
+				prevframe.axis[0],
+				prevframe.axis[2]);
+			r = normalvector.v4mag();	
+			a = v4ang(z_n, z_0, normalvector);
+		}
 
 	}
 
@@ -344,6 +390,10 @@ kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, sce
 		return;
 	}
 	this.frame.visual_remove(camera, renderer, scene);
+
+	scene.remove(this.visual.shaft);
+
+	this.visual = null;
 }
 
 </script>
@@ -387,13 +437,23 @@ function init(){
 	initTHREE(); // init webGL things
 
 	manipulator = new kinematik.KinematicChain();
+	for (var i = 0; i < 4; ++i) {
 	manipulator.pushlink();
-	manipulator.pushlink();
-	manipulator.links[0].data_fromDH(new DenavitHartenberg(0.2, 0, 0, 0));
+	}
+	manipulator.links[0].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0.2, 0.2, 0.4, 1],
+		jointaxis: [1, 0, 0, 1]
+	});
 	manipulator.links[1].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0, 0, 1.5, 1],
-		jointaxis: [0, 0, 1, 1]
+		jointlocation: [0.2, 0.3, 1.4, 1],
+		jointaxis: [1, 0, 0, 1]
+	});
+	manipulator.links[2].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0.0, 0.3, 1.4, 1],
+		jointaxis: [0, 1, 0, 1]
 	});
 
 	manipulator.visual_init(camera, renderer, scene);
