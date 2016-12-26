@@ -12,10 +12,23 @@ function v4unit(v) {
 }
 function v4dot(u, v){ return u[0]*v[0]+u[1]*v[1]+u[2]*v[2]; }
 function v4x(u, v){
-	return [u[1]*v[2]-[2]*v[1],
+	return [u[1]*v[2]-u[2]*v[1],
 		u[2]*v[0]-u[0]*v[2],
 		u[0]*v[1]-u[1]*v[0],
 		1];
+}
+
+function v4ang(v, u, n){
+	// returns a result between + and - PI. If n is provided,
+	// angles are calculated CCW wrt n.
+	var x = v4x(u, v);
+	return (n && v4dot(x, n) < 0 ? -1 : 1)
+		* Math.atan2(v4mag(x), v4dot(u, v));
+}
+
+function v4projontoplane(u, n){
+	//var normalcomponent = v4mul(v4dot(u, n), n);
+	return v4sub(u, v4mul(v4dot(u, n), n));
 }
 
 Array.prototype.v4clone = function(v){
@@ -46,6 +59,7 @@ Array.prototype.v4unit = function(){
 	var m = 1/this.v4mag();
 	this[0] *= m; this[1] *= m;
 	this[2] *= m; this[3] = 1;
+	return this;
 }
 
 Array.prototype.v4dot = function(v){
@@ -59,5 +73,10 @@ Array.prototype.v4x = function(v){
 		this[0]*v[1]-this[1]*v[0],
 		1
 	];
+}
+
+Array.prototype.v4projontoplane = function(n){
+	this.v4sub(v4mul(v4dot(this, n), n));
+	return this;
 }
 

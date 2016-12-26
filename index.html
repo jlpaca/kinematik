@@ -169,7 +169,8 @@ kinematik.KinematicLink.prototype.data_fromDH = function(newDH){
 
 // data_fromjoint:	calculates the DH parameters from the location of the
 //			joint, given in world coordinates, and information of
-//			the previous joint.
+//			the previous joint; and then calls data_fromDH to update
+//			everything else.
 
 kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 	if (!newjoint) {
@@ -180,10 +181,65 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 	this.jointtype = newjoint.jointtype || KINEMATIC_JOINTTYPE_REVOLUTE;
 	
 	var prevframe = this.prev instanceof kinematik.KinematicLink ?
-			this.prev : new Frame();
+			this.prev.frame : new Frame();
+
+	console.log(newjoint.jointaxis.v4unit());
+
+	// calculate D-H parameters
+	var d = 0;
+	var t = 0;
+	var r = 0;
+	var a = 0;
+	var z_n = newjoint.jointaxis.v4unit();
+
+	// check for integrity of the specification for the new axis.
+	if (z_n.v4epsilon()) {
+		console.log("! joint axis has zero norm");
+		return;
+	}
+
+	// case : z_n-1 and z_n are parallel.
+	//
+	// -	the choice of d is arbitrary and we set it to 0.
+	// -	x_n is in the direction of the common normal, pointing from
+	//	z_n to z_n-1 and t can be calculated accordingly. If the
+	//	common normal vanishes, x_n = x_n-1 and t = 0;
+	// -	r is calculated from the magnitude of the common normal.
+	// -	a is zero since z_n-1 // z_n.
+
+	if (v4x(prevframe.axis[2], z_n).v4epsilon()) {
+		console.log("parallel.");
+
+		var normalvector = v4sub(
+				newjoint.jointlocation,
+				prevframe.o).v4projontoplane(
+				prevframe.axis[2]);
+		d = 0;
+		if (normalvector.v4epsilon()) {
+			t = 0;
+			r = 0;
+		} else {
+			// notice the +PI on t and the sign on r:
+			// we choose x_n such that it points /towards/
+			// the previous link.
+			t = Math.PI+v4ang(normalvector,
+				prevframe.axis[0],
+				prevframe.axis[2]);
+			r = -normalvector.v4mag();
+		}
+		a = 0;
+		
+	} else {
+
+	}
+
+
+
+	var newDH = new DenavitHartenberg(d, t, r, a);
+
+	this.data_fromDH(newDH);
 
 	this.localjointlocation = this.frame.globaltolocal(newjoint.jointlocation);
-
 
 }
 
@@ -197,7 +253,7 @@ kinematik.KinematicLink.prototype.actuate = function(jparam){
 	else if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) { this.DH.d = jparam; }
 	else { console.log("! unknown joint type."); return; }
 
-	this.data_fromDH();	
+	this.data_fromDH(null);	
 }
 
 
@@ -268,10 +324,11 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 	// arbitrarily on its axis. we choose from the x and z axes of the present frame,
 	// whichever is numerically nicer.
 	this.visual.shaft.up.fromArray(
-			Math.abs(v4x(this.frame.axis[2], shaftvector)) <
-			Math.abs(v4x(this.frame.axis[0], shaftvector)) ?
-			this.frame.axis[0] : this.frame.axis[2]
+			Math.abs(v4dot(this.frame.axis[2], shaftvector)) <
+			Math.abs(v4dot(this.frame.axis[0], shaftvector)) ?
+			this.frame.axis[2] : this.frame.axis[0]
 	);
+	
 	this.visual.shaft.lookAt(new THREE.Vector3().fromArray(tip));
 
 	this.frame.visual_sync();
@@ -332,15 +389,11 @@ function init(){
 	manipulator = new kinematik.KinematicChain();
 	manipulator.pushlink();
 	manipulator.pushlink();
-	manipulator.links[0].data_fromDH(new DenavitHartenberg(0, 0, 1, 0));
-	manipulator.links[0].data_fromjoint({
-		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0, 0, 0.5, 1]
-	});
-	manipulator.links[1].data_fromDH(new DenavitHartenberg(1, 0, 1, 0));
+	manipulator.links[0].data_fromDH(new DenavitHartenberg(0.2, 0, 0, 0));
 	manipulator.links[1].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [2, 0, 1, 1]
+		jointlocation: [0, 0, 1.5, 1],
+		jointaxis: [0, 0, 1, 1]
 	});
 
 	manipulator.visual_init(camera, renderer, scene);
