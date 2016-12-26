@@ -77,7 +77,7 @@ Frame.prototype.visual_init = function(camera, renderer, scene){
 // visual_sync: updates position and orientation of webGL representation to
 //		reflect current origin and unit vectors.
 
-Frame.prototype.visual_sync = function() {
+Frame.prototype.visual_sync = function(){
 	// guard against updates before the representations have been created.
 	if (this.visual === null) {
 		console.log("! call to visual_sync without initialised visual");
@@ -118,7 +118,7 @@ Frame.prototype.visual_sync = function() {
 // 			deletes the related objects, and sets the visual member
 // 			to null.
 
-Frame.prototype.visual_remove = function(camera, renderer, scene) {
+Frame.prototype.visual_remove = function(camera, renderer, scene){
 	if (this.visual === null) {
 		console.log("! call to visual_remove without initialised visual");
 		return;
@@ -136,7 +136,7 @@ Frame.prototype.visual_remove = function(camera, renderer, scene) {
 //			the frame. Note that repeated calls to this function
 //			apply a series of transformations in sequence.
 
-Frame.prototype.transform_mat4push = function(T) {
+Frame.prototype.transform_mat4push = function(T){
 	var newo = numeric.dot(T, this.o);
 	for (var i = 0; i < 3; ++i) {
 	this.axis[i] = numeric.dot(T, v4add(this.o, this.axis[i])).v4sub(newo);
@@ -149,7 +149,25 @@ Frame.prototype.transform_mat4push = function(T) {
 //			result of applying that transformation to the inertial
 //			frame (origin 0 and standard unit basis).
 
-Frame.prototype.transform_mat4set = function(T) {
+Frame.prototype.transform_mat4set = function(T){
 	for (var j = 0; j < 3; ++j) { this.o[j] = T[j][3];
 	for (var i = 0; i < 3; ++i) { this.axis[i][j] = T[j][i]; }}
+}
+
+
+Frame.prototype.localtoglobal = function(v){
+	var ret = this.o.v4clone();
+	for (var i = 0; i < 3; ++i) {
+		ret.v4add(v4mul(v[i], this.axis[i]));
+	}
+	return ret;
+}
+
+Frame.prototype.globaltolocal = function(v){
+	v.v4sub(this.o);
+	var ret = [0, 0, 0, 1];
+	for (var i = 0; i < 3; ++i) {
+		ret[i] = v4dot(v, this.axis[i]);
+	}
+	return ret;
 }
