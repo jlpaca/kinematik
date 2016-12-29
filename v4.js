@@ -93,7 +93,6 @@ Array.prototype.v4projontoplane = function(n){
 
 Array.prototype.v4projontovector = function(v){
 	var newu = v4mul(v4dot(this, v)/v4mag2(v), v);
-	console.log(v4dot(this, v));
 	this[0] = newu[0];
 	this[1] = newu[1];
 	this[2] = newu[2];

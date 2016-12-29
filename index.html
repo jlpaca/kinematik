@@ -303,15 +303,27 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 //		all the data.
 
 kinematik.KinematicLink.prototype.actuate = function(jparam){
-	if (this.jointtype === KINEMATIK_JOINTTYPE_REVOLUTE) {
+	if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) {
+		this.DH.d = jparam;
+	} else {
+		// all joints that are any other type are defaulted to being
+		// revolute.
 		this.DH.t = jparam;
 	}
-	else if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) {
-		this.DH.d = jparam;
-	}
-	else { console.log("! unknown joint type."); return; }
-
 	this.data_fromDH(null);	
+}
+
+
+// increment:	acts like actuate, except adds an increment/decrement to joint
+//		parameter instead of setting it directcly.
+
+kinematik.KinematicLink.prototype.increment = function(deltaj){
+	if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) {
+		this.DH.d += deltaj;
+	} else {
+		this.DH.t += deltaj;
+	}
+	this.data_fromDH(null);
 }
 
 
@@ -325,11 +337,15 @@ var KINEMATIK_KINEMATICLINK_MATERIAL_B =
 
 var KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS = 0.02;
 
-var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_THICKNESS = 0.03;
-var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_THICKNESS = 0.017;
-var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_HEIGHT = 0.04;
-var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_HEIGHT = 0.06;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_RADIUS = 0.03;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_RADIUS = 0.017;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_HEIGHT = 0.04;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_HEIGHT = 0.06;
 
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_RADIUS = 0.025;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_RADIUS = 0.017;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_HEIGHT = 0.08;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_HEIGHT = 0.12;
 // visual_init:	creates webGL objects for visual representation of link and
 //		adds them to the scene.
 
@@ -339,33 +355,68 @@ kinematik.KinematicLink.prototype.visual_init = function(camera, renderer, scene
 		return;
 	}
 
+	// representation of join depends on type of joint:
+	//
+	// -	if the joint type is PRISMATIC, joints are drawn as boxes.
+	// -	any other joint type is assumed REVOLUTE and joints are drawn
+	//	as cylinders.
+	if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) {
+		this.visual = {
+			shaft:	new THREE.Mesh(	new THREE.BoxGeometry(
+		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS, 1),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A),
+
+			shaft2:	new THREE.Mesh(	new THREE.BoxGeometry(
+		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS, 1),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A),
+
+			jointouter: new THREE.Mesh( new THREE.BoxGeometry(
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_RADIUS*2,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_HEIGHT,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_RADIUS*2),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A),
+
+			jointinner:  new THREE.Mesh( new THREE.BoxGeometry(
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_RADIUS*2,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_HEIGHT,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_RADIUS*2),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A)
+		};
+
+		scene.add(this.visual.shaft);
+		scene.add(this.visual.shaft2);
+		scene.add(this.visual.jointouter);
+		scene.add(this.visual.jointinner);
+
+	} else {
+		this.visual = {
+			shaft:	new THREE.Mesh(	new THREE.BoxGeometry(
+		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS, 1),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A),
+
+			jointouter:  new THREE.Mesh( new THREE.CylinderGeometry(
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_RADIUS,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_RADIUS,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_HEIGHT, 12),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A),
+
+			jointinner:  new THREE.Mesh( new THREE.CylinderGeometry(
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_RADIUS,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_RADIUS,
+		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_HEIGHT, 12),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A)
+		};
+
+		scene.add(this.visual.shaft);
+		scene.add(this.visual.jointouter);
+		scene.add(this.visual.jointinner);
+	}
+
 	// initialise visual for associated frame.
 	this.frame.visual_init(camera, renderer, scene);
-
-
-	this.visual = {
-		shaft:	new THREE.Mesh(
-			new THREE.BoxGeometry(
-			KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS,
-			KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS, 1),
-			KINEMATIK_KINEMATICLINK_MATERIAL_A),
-		jointouter: new THREE.Mesh(
-			new THREE.CylinderGeometry(
-			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_THICKNESS,
-			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_THICKNESS,
-			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_HEIGHT, 12),
-			KINEMATIK_KINEMATICLINK_MATERIAL_A),
-		jointinner: new THREE.Mesh(
-			new THREE.CylinderGeometry(
-			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_THICKNESS,
-			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_THICKNESS,
-			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_HEIGHT, 12),
-			KINEMATIK_KINEMATICLINK_MATERIAL_B)
-	};
-
-	scene.add(this.visual.shaft);
-	scene.add(this.visual.jointouter);
-	scene.add(this.visual.jointinner);
 }
 
 // visual_sync:	updates the position and orientation of visual representation
@@ -376,30 +427,64 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 		console.log("! call to visual_sync without initialised visual");
 		return;
 	}
+
+	var prevframe = this.prev instanceof kinematik.KinematicLink ?
+			this.prev.frame : new Frame();
 	
-	// position and orient shaft.
-	//
-	// shaft connects the present joint to the next one. the two
-	// endpoints are calculated here.
+	// calculate important vectors and locations for use later.
 	var toe = this.prev instanceof kinematik.KinematicLink ?
 		this.prev.frame.localtoglobal(this.prev.localjointlocation) :
 		[0, 0, 0, 1];
 	var tip = this.frame.localtoglobal(this.localjointlocation);
 	var shaftvector = v4sub(tip, toe);
-	var midpoint = v4add(toe, tip).v4mul(0.5);
 
-	// check for zero-length links so that scaling doesn't break matrices.
-	// if the length is zero, just don't render the shaft.
-	if (shaftvector.v4epsilon()) {
-		this.visual.shaft.scale.z = 1;
-		this.visual.shaft.visible = false;
-	} else {
-		this.visual.shaft.scale.z = shaftvector.v4mag();
-		this.visual.shaft.visible = true;
+	// position and orient shaft.
+	// 
+	// -	for prismatic joints, the shaft is broken into two parts: one
+	//	extending along the joint axis, and a second one that goes
+	//	perpendicular to it to connect it to the next joint. this is
+	//	to ensure the joint geometry looks reasonable.
+	//
+	//	we do that by projecting the shaftvector (a variable shared by
+	//	the 1st segment of prismatic joint shaft and only segment of
+	//	revolute joint shaft) onto the joint axis if the joint is
+	//	prismatic. Thus prismatic joints can share half the code with
+	//	revolute joint, and we only need to deal specifically with
+	//	the second segment.
+	
+	var shaft2vector;
+	if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) {
+		shaftvector.v4projontovector(prevframe.axis[2]);
+		shaft2vector = v4sub(tip, v4add(toe, shaftvector));
+
+		// a joint thickness is added to the length of the shaft. The
+		// purpose is both to ensure junctions look centred, and to
+		// ensure the scaling factor is positive so that the matricies
+		// don't break.
+
+		this.visual.shaft2.scale.z = shaft2vector.v4mag()
+			+ KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS;
+
+		this.visual.shaft2.position.fromArray(
+				v4sub(tip, v4mul(0.5, shaft2vector))
+				);
+		this.visual.shaft2.up.fromArray(this.frame.axis[0]);
+		this.visual.shaft2.lookAt(new THREE.Vector3().fromArray(tip));
 	}
 
+	// here we position and orient the shaft.
+	//
+	// -	the centre of the shaft is sent to toe + 0.5 shaft vector
+	// -	the shaft is pointed at toe
+	// -	the shaft is rotated so that it doesn't rotate in the local
+	//	coordinate frame.
 
-	this.visual.shaft.position.fromArray(midpoint);
+	this.visual.shaft.scale.z = shaftvector.v4mag()
+		+ KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS;
+
+	this.visual.shaft.position.fromArray(
+			v4mul(0.5, shaftvector).v4add(toe)
+			);
 
 	// we want to consistently orient the shaft so that it doesn't spin
 	// about arbitrarily on its axis. we choose from the x and z axes of
@@ -410,22 +495,27 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 			this.frame.axis[2] : this.frame.axis[0]
 	);
 	
-	this.visual.shaft.lookAt(new THREE.Vector3().fromArray(tip));
-
+	this.visual.shaft.lookAt(new THREE.Vector3().fromArray(toe));
 
 	// position and orient joint.
 	//
 	// the joint of link i is attached at the end of link i-1, which is
-	// toe of shaftvector. The axis is aligned with z_i.
-	
+	// toe of shaftvector. The axis is aligned with z_i-1.
+
+	this.visual.jointinner.visible = true;
+	this.visual.jointouter.visible = true;
+
 	this.visual.jointinner.position.fromArray(toe);
-	this.visual.jointinner.up.fromArray(this.frame.axis[2]);
-	this.visual.jointinner.lookAt(new THREE.Vector3().fromArray(tip));
+	this.visual.jointinner.up.fromArray(prevframe.axis[2]);
+	this.visual.jointinner.lookAt(new THREE.Vector3().fromArray(
+				v4add(toe, prevframe.axis[0])));
 
 	this.visual.jointouter.position.fromArray(toe);
-	this.visual.jointouter.up.fromArray(this.frame.axis[2]);
-	this.visual.jointouter.lookAt(new THREE.Vector3().fromArray(tip));
+	this.visual.jointouter.up.fromArray(prevframe.axis[2]);
+	this.visual.jointouter.lookAt(new THREE.Vector3().fromArray(
+			v4add(toe, prevframe.axis[0])));
 
+	// finally, also sync the visual for the associated frame
 	this.frame.visual_sync();
 }
 
@@ -441,7 +531,9 @@ kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, sce
 	}
 	this.frame.visual_remove(camera, renderer, scene);
 
+
 	scene.remove(this.visual.shaft);
+	
 	scene.remove(this.visual.jointinner);
 	scene.remove(this.visual.jointouter);
 
@@ -510,7 +602,8 @@ function init(){
 	});
 
 	manipulator.links[1].data_fromjoint({
-		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointtype: KINEMATIK_JOINTTYPE_PRISMATIC,
+		//jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
 		jointlocation: [0.14, 0, 0.2, 1],
 		jointaxis: [1, 0, 0, 1]
 	});
@@ -554,9 +647,10 @@ var _t = 0;
 function timestep(){
 	_t += 0.01;
 
-	manipulator.links[1].actuate(_t);
-	manipulator.links[2].actuate(_t);
-	manipulator.links[3].actuate(_t);
+	//manipulator.links[1].actuate(_t);
+	//manipulator.links[2].actuate(_t);
+	//manipulator.links[3].actuate(_t);
+	manipulator.links[1].actuate(Math.cos(_t));
 	manipulator.data_fromDH(null);
 	manipulator.visual_sync();
 
