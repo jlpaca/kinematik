@@ -26,6 +26,7 @@ canvas { display: block; }
 <script src="frame.js"></script>
 
 <script>
+////////////////////////////////////////////////////////////////////////////////
 var KINEMATIK_JOINTTYPE_REVOLUTE = 1;
 var KINEMATIK_JOINTTYPE_PRISMATIC = 2;
 
@@ -57,9 +58,9 @@ kinematik.KinematicChain.prototype.pushlink = function(){
 
 // poplink:	removes the last link from the kinematic chain. Note that this
 //		function does not consider the representation of the link, and
-//		visual_remove should be called on the link to be removed before
-//		this function removes the data to prevent garbage from remaining
-//		on the scene.
+//		visual_remove should be called on the link to be removed
+//		before this function removes the data to prevent garbage from
+//		remaining on the scene.
 
 kinematik.KinematicChain.prototype.poplink = function(){
 	this.links.pop();
@@ -113,18 +114,19 @@ kinematik.KinematicChain.prototype.visual_sync = function(){
 //
 //			DH:	Denavit-Hartenberg parameters.
 //
-//			prev:	previous link. Maintained by user effort - it is
-//				encouraged to always carry out link operations on
-//				kinematicChain level to prevent this from breaking.
+//			prev:	previous link. Maintained by user effort - it
+//				is encouraged to always carry out operations
+//				on level of the kinematicChain object level in
+//				order to prevent this from breaking.
 //
 //			frame:	object representing frame i.
 //
-//			T:	the 4-matrix T_i, which gives the transformation
+//			T:	the 4-matrix T_i gives the transformation
 //				from the inertial frame at origin to frame i.
 //
-//			A:	the 4-matrix A_i, which gives transformation from
-//				frame i-1 to frame i. Notice that we have T_i =
-//				T_{i-1} A_i.
+//			A:	the 4-matrix A_i, which gives transformation
+//				from frame i-1 to frame i. Notice that we
+//				have T_i = T_{i-1} A_i.
 //
 
 kinematik.KinematicLink = function(){
@@ -149,7 +151,7 @@ kinematik.KinematicLink = function(){
 //		other members to agree with DH.
 //
 //		this function requires the prev member to be properly set. also
-//		notice that the method doesn't touch the localjointlocation member:
+//		notice that the method doesn't touch this.localjointlocation:
 //		it is defaulted to the zero vector upon init and, if set with
 //		data_fromjoint later on, will remain set when DH are updated.
 
@@ -169,8 +171,8 @@ kinematik.KinematicLink.prototype.data_fromDH = function(newDH){
 
 // data_fromjoint:	calculates the DH parameters from the location of the
 //			joint, given in world coordinates, and information of
-//			the previous joint; and then calls data_fromDH to update
-//			everything else.
+//			the previous joint; and then calls data_fromDH to
+//			update everything else.
 
 kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 	if (!newjoint) {
@@ -233,20 +235,25 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 		}
 		a = 0;
 	}
+
 	// case: z_n-1 and z_n are not parallel.
 	//
 	// -	d is the offset along z_n-1 to endpoint of common normal. This
 	//	involves solving an equation for the endpoints.
 	//
-	// -	x_n is, as in the parallel case, the direction of the common normal
-	//	pointing from z_n to z_n-1
+	// -	t is angle between x_n and x_n-1 about z_n-1.
 	// -	r is calculated the magnitude from the common normal.
-	// -	
+	// -	a is angle from z_n-1 to z_n about common normal.
+	//
+	// t is chosen such that the x axis points from child to parent. When
+	// the common normal vanishes, t is chosen with z_n x z_n-1 as normal.
+	// choice of a depends on that choice of normal as well.
 
 	else {
 		var diffvector = v4sub(newjoint.jointlocation, prevframe.o);
+		var normaldirection = v4x(newjoint.jointaxis, prevframe.axis[2]).v4unit();
 		var normalvector = v4projontovector(diffvector,
-				v4x(newjoint.jointaxis, prevframe.axis[2])
+				normaldirection
 				);	
 
 		// solving the equations.
@@ -264,9 +271,10 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 		d = (v4dot(diffvector, z_0) - factor*v4dot(diffvector, z_n))/
 		(v4dot(z_0, z_0) - factor*v4dot(z_n, z_0));
 
+
 		// if the normal vector vanishes, the two axes coincide.
 		if (normalvector.v4epsilon()) {
-			t = v4ang(prevframe.axis[0], prevframe.axis[2]);
+			t = v4ang(normaldirection, prevframe.axis[0]);
 			r = 0;
 			a = v4ang(z_n, z_0);
 		} else {
@@ -285,8 +293,8 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 
 	this.data_fromDH(newDH);
 
-	this.localjointlocation = this.frame.globaltolocal(newjoint.jointlocation);
-
+	this.localjointlocation =
+		this.frame.globaltolocal(newjoint.jointlocation);
 }
 
 
@@ -295,8 +303,12 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 //		all the data.
 
 kinematik.KinematicLink.prototype.actuate = function(jparam){
-	if (this.jointtype === KINEMATIK_JOINTTYPE_REVOLUTE) { this.DH.t = jparam; }
-	else if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) { this.DH.d = jparam; }
+	if (this.jointtype === KINEMATIK_JOINTTYPE_REVOLUTE) {
+		this.DH.t = jparam;
+	}
+	else if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) {
+		this.DH.d = jparam;
+	}
 	else { console.log("! unknown joint type."); return; }
 
 	this.data_fromDH(null);	
@@ -306,10 +318,17 @@ kinematik.KinematicLink.prototype.actuate = function(jparam){
 // some constants that determine the appearance of webGL visual representation
 // of the links.
 
-var KINEMATIK_KINEMATICLINK_MATERIAL = new THREE.MeshNormalMaterial();
+var KINEMATIK_KINEMATICLINK_MATERIAL_A =
+	new THREE.MeshLambertMaterial({ color: 0xff4f00 });
+var KINEMATIK_KINEMATICLINK_MATERIAL_B =
+	new THREE.MeshLambertMaterial({ color: 0xffffff });
 
-var KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS = 0.1;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS = 0.02;
 
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_THICKNESS = 0.03;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_THICKNESS = 0.017;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_HEIGHT = 0.04;
+var KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_HEIGHT = 0.06;
 
 // visual_init:	creates webGL objects for visual representation of link and
 //		adds them to the scene.
@@ -329,10 +348,24 @@ kinematik.KinematicLink.prototype.visual_init = function(camera, renderer, scene
 			new THREE.BoxGeometry(
 			KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS,
 			KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS, 1),
-			KINEMATIK_KINEMATICLINK_MATERIAL)
+			KINEMATIK_KINEMATICLINK_MATERIAL_A),
+		jointouter: new THREE.Mesh(
+			new THREE.CylinderGeometry(
+			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_THICKNESS,
+			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_THICKNESS,
+			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_OUTER_HEIGHT, 12),
+			KINEMATIK_KINEMATICLINK_MATERIAL_A),
+		jointinner: new THREE.Mesh(
+			new THREE.CylinderGeometry(
+			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_THICKNESS,
+			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_THICKNESS,
+			KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_INNER_HEIGHT, 12),
+			KINEMATIK_KINEMATICLINK_MATERIAL_B)
 	};
 
 	scene.add(this.visual.shaft);
+	scene.add(this.visual.jointouter);
+	scene.add(this.visual.jointinner);
 }
 
 // visual_sync:	updates the position and orientation of visual representation
@@ -344,6 +377,8 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 		return;
 	}
 	
+	// position and orient shaft.
+	//
 	// shaft connects the present joint to the next one. the two
 	// endpoints are calculated here.
 	var toe = this.prev instanceof kinematik.KinematicLink ?
@@ -366,9 +401,9 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 
 	this.visual.shaft.position.fromArray(midpoint);
 
-	// we want to consistently orient the shaft so that it doesn't spin about
-	// arbitrarily on its axis. we choose from the x and z axes of the present frame,
-	// whichever is numerically nicer.
+	// we want to consistently orient the shaft so that it doesn't spin
+	// about arbitrarily on its axis. we choose from the x and z axes of
+	// the present frame, whichever is numerically nicer.
 	this.visual.shaft.up.fromArray(
 			Math.abs(v4dot(this.frame.axis[2], shaftvector)) <
 			Math.abs(v4dot(this.frame.axis[0], shaftvector)) ?
@@ -377,14 +412,29 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 	
 	this.visual.shaft.lookAt(new THREE.Vector3().fromArray(tip));
 
+
+	// position and orient joint.
+	//
+	// the joint of link i is attached at the end of link i-1, which is
+	// toe of shaftvector. The axis is aligned with z_i.
+	
+	this.visual.jointinner.position.fromArray(toe);
+	this.visual.jointinner.up.fromArray(this.frame.axis[2]);
+	this.visual.jointinner.lookAt(new THREE.Vector3().fromArray(tip));
+
+	this.visual.jointouter.position.fromArray(toe);
+	this.visual.jointouter.up.fromArray(this.frame.axis[2]);
+	this.visual.jointouter.lookAt(new THREE.Vector3().fromArray(tip));
+
 	this.frame.visual_sync();
 }
 
 
-// visual_remove:	removes the visual representation from the scene, deletes
-//			the relevant objects, and sets visual back to null.
+// visual_remove:	removes the visual representation from the scene,
+//			deletes the relevant objects, and sets visual to null.
 
 kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, scene){
+
 	if (this.visual === null) {
 		console.log("! call to visual_remove without initialised visual");
 		return;
@@ -422,10 +472,20 @@ function initTHREE(){
 	renderer = new THREE.WebGLRenderer();
 	scene = new THREE.Scene();
 
+	scene.background = new THREE.Color(0xf4f4f4);
+
+	// populate scene with reference plane and light
 	var refplane = new THREE.Mesh(
 			new THREE.PlaneGeometry(1, 1),
-			new THREE.MeshBasicMaterial({ color: 0x333333 }));
+			new THREE.MeshBasicMaterial({ color: 0xffffff }));
 	scene.add(refplane);
+
+	var ambientlight = new THREE.AmbientLight(0xffffff);
+	scene.add(ambientlight);
+	var directionallight = new THREE.DirectionalLight(0xffffff, 0.8);
+	directionallight.position.set(10, 10, 10);
+	scene.add(directionallight);
+
 
 	// append canvas to document
 	document.body.appendChild(renderer.domElement);
@@ -437,23 +497,38 @@ function init(){
 	initTHREE(); // init webGL things
 
 	manipulator = new kinematik.KinematicChain();
-	for (var i = 0; i < 4; ++i) {
-	manipulator.pushlink();
+	for (var i = 0; i < 5; ++i) {
+		manipulator.pushlink();
 	}
+
 	manipulator.links[0].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0.2, 0.2, 0.4, 1],
-		jointaxis: [1, 0, 0, 1]
+		jointlocation: [0, 0, 0.1, 1],
+		jointaxis: [0, 0, 1, 1]
 	});
+
 	manipulator.links[1].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0.2, 0.3, 1.4, 1],
+		jointlocation: [0.14, 0, 0.2, 1],
 		jointaxis: [1, 0, 0, 1]
 	});
+
 	manipulator.links[2].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0.0, 0.3, 1.4, 1],
+		jointlocation: [0.12, 0, 0.6, 1],
+		jointaxis: [1, 0, 0, 1]
+	});
+
+	manipulator.links[3].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0, 0.1, 0.6, 1],
 		jointaxis: [0, 1, 0, 1]
+	});
+
+	manipulator.links[4].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0, 0.3, 0.6, 1],
+		jointaxis: [1, 0, 0, 1]
 	});
 
 	manipulator.visual_init(camera, renderer, scene);
@@ -478,7 +553,8 @@ function timestep(){
 	_t += 0.01;
 
 	manipulator.links[1].actuate(_t);
-
+	manipulator.links[2].actuate(_t);
+	manipulator.links[3].actuate(_t);
 	manipulator.data_fromDH(null);
 	manipulator.visual_sync();
 
