@@ -591,10 +591,12 @@ function init(){
 	initTHREE(); // init webGL things
 
 	manipulator = new kinematik.KinematicChain();
+
+	/*
 	for (var i = 0; i < 5; ++i) {
 		manipulator.pushlink();
 	}
-
+	
 	manipulator.links[0].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
 		jointlocation: [0, 0, 0.1, 1],
@@ -625,6 +627,25 @@ function init(){
 		jointlocation: [0, 0.3, 0.6, 1],
 		jointaxis: [1, 0, 0, 1]
 	});
+	*/
+
+	/*
+	var newjloc = [0, 0, 0, 1];
+	var newaxis = [0, 0, 0, 1];
+	for (var i = 0; i < 5; ++i) {
+		newjloc.v4add([Math.random(), Math.random(), Math.random(), 1].v4mul(0.1));
+		newaxis = [Math.random(), Math.random(), Math.random(), 1];
+
+		manipulator.pushlink();
+		manipulator.links[i].data_fromjoint({
+			jointtype: Math.random() > 0.5 ?
+				KINEMATIK_JOINTTYPE_REVOLUTE :
+				KINEMATIK_JOINTTYPE_PRISMATIC,
+			jointlocation: newjloc,
+			jointaxis: newaxis
+		});
+	}
+	*/
 
 	manipulator.visual_init(camera, renderer, scene);
 	
@@ -650,7 +671,15 @@ function timestep(){
 	//manipulator.links[1].actuate(_t);
 	//manipulator.links[2].actuate(_t);
 	//manipulator.links[3].actuate(_t);
-	manipulator.links[1].actuate(Math.cos(_t));
+
+	/*
+	for (var i = 0; i < manipulator.links.length; ++i) {
+		manipulator.links[i].actuate(
+			manipulator.links[i].jointtype ==
+			KINEMATIK_JOINTTYPE_PRISMATIC ?
+			Math.cos(_t)*0.2 : _t
+			);
+	}*/
 	manipulator.data_fromDH(null);
 	manipulator.visual_sync();
 
