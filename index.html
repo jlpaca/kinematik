@@ -442,6 +442,8 @@ kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, sce
 	this.frame.visual_remove(camera, renderer, scene);
 
 	scene.remove(this.visual.shaft);
+	scene.remove(this.visual.jointinner);
+	scene.remove(this.visual.jointouter);
 
 	this.visual = null;
 }
@@ -477,7 +479,7 @@ function initTHREE(){
 	// populate scene with reference plane and light
 	var refplane = new THREE.Mesh(
 			new THREE.PlaneGeometry(1, 1),
-			new THREE.MeshBasicMaterial({ color: 0xffffff }));
+			new THREE.MeshBasicMaterial({ color: 0xfafafa }));
 	scene.add(refplane);
 
 	var ambientlight = new THREE.AmbientLight(0xffffff);
