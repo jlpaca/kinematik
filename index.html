@@ -502,13 +502,14 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 	// the joint of link i is attached at the end of link i-1, which is
 	// toe of shaftvector. The axis is aligned with z_i-1.
 
-	this.visual.jointinner.visible = true;
-	this.visual.jointouter.visible = true;
+	this.visual.jointinner.visible = 
+	this.visual.jointouter.visible =
+	this.prev instanceof kinematik.KinematicLink;
 
 	this.visual.jointinner.position.fromArray(toe);
 	this.visual.jointinner.up.fromArray(prevframe.axis[2]);
 	this.visual.jointinner.lookAt(new THREE.Vector3().fromArray(
-				v4add(toe, prevframe.axis[0])));
+			v4add(toe, prevframe.axis[0])));
 
 	this.visual.jointouter.position.fromArray(toe);
 	this.visual.jointouter.up.fromArray(prevframe.axis[2]);
