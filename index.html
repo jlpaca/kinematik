@@ -10,8 +10,15 @@
 html, body {
 	margin: 0;
 	padding: 0;
+
+	width: 100%;
+	height: 100%;
 }
-canvas { display: block; }
+#viewport {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
 </style>
 
 <!-- external libraries -->
@@ -546,6 +553,30 @@ kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, sce
 
 <!-- main.js -->
 <script>
+// declarations for user interaction
+function Cursor(){
+
+	this.q2d = [0, 0];
+	this.q3d = [0, 0, 0, 1];
+
+	return this;
+}
+Cursor.prototype.visual_init = function(camera, renderer, scene){
+
+}
+Cursor.prototype.mousemovehandler = function(e) {
+	this.q2d[0] = e.clientX;
+	this.q2d[1] = e.target.clientHeight-e.clientY;
+	console.log(this.q2d);
+}
+Cursor.prototype.attachhandlers = function(camera, renderer, scene) {
+	renderer.domElement.addEventListener("mousemove",
+			this.mousemovehandler.bind(this));
+}
+
+var cursor;
+
+// declarations for THREE
 var camera;
 var renderer;
 var scene;
@@ -554,9 +585,11 @@ var orbitcontrols;
 
 function initTHREE(){
 	// initialise camera
+	var canvas = document.getElementById("viewport");
 	camera = new THREE.PerspectiveCamera(
 		45,
-		window.innerWidth/window.innerHeight,
+		canvas.clientWidth/canvas.clientHeight,
+		//window.innerWidth/window.innerHeight,
 		0.1, 1000 );
 	
 	// initial position of camera
@@ -564,7 +597,7 @@ function initTHREE(){
 	camera.position.z = 10;
 
 	// initialise renderer and scene
-	renderer = new THREE.WebGLRenderer();
+	renderer = new THREE.WebGLRenderer({ canvas: canvas });
 	scene = new THREE.Scene();
 
 	scene.background = new THREE.Color(0xf4f4f4);
@@ -587,79 +620,32 @@ function initTHREE(){
 
 }
 
+// declarations for kinematik
 var manipulator = null;
 function init(){
 	initTHREE(); // init webGL things
 
+	// init manipulator
 	manipulator = new kinematik.KinematicChain();
-
-	/*
-	for (var i = 0; i < 5; ++i) {
-		manipulator.pushlink();
-	}
-	
-	manipulator.links[0].data_fromjoint({
-		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0, 0, 0.1, 1],
-		jointaxis: [0, 0, 1, 1]
-	});
-
-	manipulator.links[1].data_fromjoint({
-		jointtype: KINEMATIK_JOINTTYPE_PRISMATIC,
-		//jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0.14, 0, 0.2, 1],
-		jointaxis: [1, 0, 0, 1]
-	});
-
-	manipulator.links[2].data_fromjoint({
-		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0.12, 0, 0.6, 1],
-		jointaxis: [1, 0, 0, 1]
-	});
-
-	manipulator.links[3].data_fromjoint({
-		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0, 0.1, 0.6, 1],
-		jointaxis: [0, 1, 0, 1]
-	});
-
-	manipulator.links[4].data_fromjoint({
-		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
-		jointlocation: [0, 0.3, 0.6, 1],
-		jointaxis: [1, 0, 0, 1]
-	});
-	*/
-
-	/*
-	var newjloc = [0, 0, 0, 1];
-	var newaxis = [0, 0, 0, 1];
-	for (var i = 0; i < 5; ++i) {
-		newjloc.v4add([Math.random(), Math.random(), Math.random(), 1].v4mul(0.1));
-		newaxis = [Math.random(), Math.random(), Math.random(), 1];
-
-		manipulator.pushlink();
-		manipulator.links[i].data_fromjoint({
-			jointtype: Math.random() > 0.5 ?
-				KINEMATIK_JOINTTYPE_REVOLUTE :
-				KINEMATIK_JOINTTYPE_PRISMATIC,
-			jointlocation: newjloc,
-			jointaxis: newaxis
-		});
-	}
-	*/
-
 	manipulator.visual_init(camera, renderer, scene);
-	
+
+	// init interaction
+	cursor = new Cursor();
+	cursor.visual_init(camera, renderer, scene);
+	cursor.attachhandlers(camera, renderer, scene);
 
 	orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
+
 }
 
 function render(){
-	// adjust camera and renderer in response to any viewport size change.
-	camera.aspect = window.innerWidth/window.innerHeight;
-	camera.updateProjectionMatrix();
+	renderer.setSize(renderer.domElement.clientWidth,
+			renderer.domElement.clientHeight, false);
 
-	renderer.setSize(window.innerWidth, window.innerHeight);
+	// adjust camera and renderer in response to any viewport size change.
+	camera.aspect = renderer.domElement.clientWidth/
+			renderer.domElement.clientHeight;
+	camera.updateProjectionMatrix();
 
 	// render the scene as seen through camera.
 	renderer.render(scene, camera);
@@ -669,18 +655,6 @@ var _t = 0;
 function timestep(){
 	_t += 0.01;
 
-	//manipulator.links[1].actuate(_t);
-	//manipulator.links[2].actuate(_t);
-	//manipulator.links[3].actuate(_t);
-
-	/*
-	for (var i = 0; i < manipulator.links.length; ++i) {
-		manipulator.links[i].actuate(
-			manipulator.links[i].jointtype ==
-			KINEMATIK_JOINTTYPE_PRISMATIC ?
-			Math.cos(_t)*0.2 : _t
-			);
-	}*/
 	manipulator.data_fromDH(null);
 	manipulator.visual_sync();
 
@@ -693,6 +667,10 @@ function timestep(){
 </script>
 
 </head>
-<body></body>
+<body>
+	<canvas id="viewport">
+	</canvas>
+
+</body>
 <script>init(); timestep(); </script>
 </html>
