@@ -362,12 +362,19 @@ kinematik.KinematicLink.prototype.visual_init = function(camera, renderer, scene
 		return;
 	}
 
-	// representation of join depends on type of joint:
-	//
-	// -	if the joint type is PRISMATIC, joints are drawn as boxes.
-	// -	any other joint type is assumed REVOLUTE and joints are drawn
-	//	as cylinders.
+	// representation depends on joint type.
 	if (this.jointtype === KINEMATIK_JOINTTYPE_PRISMATIC) {
+		// if the joint type is PRISMATIC:
+		//
+		// -	the shaft is broken into two segments, with one
+		//	pointing along the actuation axis, and the other
+		//	connecting it in a perpendicular direction to the
+		//	following joint. This is to ensure that the graphic
+		//	representation of the joint looks reasonable.
+		//
+		// -	the joint is drawn as a rectangular box with longer
+		//	in the direction of the joint axis.
+
 		this.visual = {
 			shaft:	new THREE.Mesh(	new THREE.BoxGeometry(
 		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS,
@@ -398,6 +405,15 @@ kinematik.KinematicLink.prototype.visual_init = function(camera, renderer, scene
 		scene.add(this.visual.jointinner);
 
 	} else {
+		// if the joint type is anything else it is assumed to
+		// be REVOLUTE.
+		//
+		// -	the shaft is just a bar connecting the joint with
+		//	the previous link with the joint with the next link.
+		//
+		// -	the joint is drawn as a cylinder whose axis is
+		//	parallel to the joint axis.
+
 		this.visual = {
 			shaft:	new THREE.Mesh(	new THREE.BoxGeometry(
 		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS,
@@ -449,8 +465,7 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 	// 
 	// -	for prismatic joints, the shaft is broken into two parts: one
 	//	extending along the joint axis, and a second one that goes
-	//	perpendicular to it to connect it to the next joint. this is
-	//	to ensure the joint geometry looks reasonable.
+	//	perpendicular to it to connect it to the next joint.
 	//
 	//	we do that by projecting the shaftvector (a variable shared by
 	//	the 1st segment of prismatic joint shaft and only segment of
@@ -554,20 +569,58 @@ kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, sce
 <!-- main.js -->
 <script>
 // declarations for user interaction
-function Cursor(){
+function Cursor(camera, renderer, scene){
+
+	this.camera = camera;
+	this.renderer = renderer;
+
+	this.raycaster = new THREE.Raycaster();
 
 	this.q2d = [0, 0];
 	this.q3d = [0, 0, 0, 1];
 
+	this.visual = null;
+
+	this.attachhandlers(camera, renderer, scene);
+
 	return this;
 }
 Cursor.prototype.visual_init = function(camera, renderer, scene){
+	// camera, renderer, scene are supplied for consistency, even
+	// though the object has memory of camera & renderer upon
+	// initialisation. If the parameters here are inconsistent with
+	// the one supplied to the constructor, the class will calculate
+	// the projection into one scene but draw the 3d cursor in another,
+	// which is silly.
 
+	if (this.visual !== null) {
+		console.log("! repeated call to visual_init");
+		return;
+	}
+	this.visual = {};
+}
+Cursor.prototype.visual_sync = function(){
+	if (this.visual === null) {
+		console.log("! call to visual_sync without intialised visual");
+		return;
+	}
 }
 Cursor.prototype.mousemovehandler = function(e) {
-	this.q2d[0] = e.clientX;
-	this.q2d[1] = e.target.clientHeight-e.clientY;
-	console.log(this.q2d);
+	// update cursor position in screen coordinates.
+	// note that we use the coordinate convention of the canvas (-1 to 1)
+	// as opposed to the DOM.
+	this.q2d[0] = e.clientX/e.target.clientWidth*2-1;
+	this.q2d[1] = -e.clientY/e.target.clientHeight*2+1;
+
+	// update the raycaster.
+	this.raycaster.setFromCamera(
+			new THREE.Vector2().fromArray(this.q2d),
+			this.camera);
+	var intersects = this.raycaster.intersectObjects(scene.children);
+
+	for ( var i = 0; i < intersects.length; ++i) {
+		intersects[i].object.material.color.set(0xff0000);
+	}
 }
 Cursor.prototype.attachhandlers = function(camera, renderer, scene) {
 	renderer.domElement.addEventListener("mousemove",
@@ -630,9 +683,8 @@ function init(){
 	manipulator.visual_init(camera, renderer, scene);
 
 	// init interaction
-	cursor = new Cursor();
+	cursor = new Cursor(camera, renderer, scene);
 	cursor.visual_init(camera, renderer, scene);
-	cursor.attachhandlers(camera, renderer, scene);
 
 	orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
 
@@ -646,6 +698,10 @@ function render(){
 	camera.aspect = renderer.domElement.clientWidth/
 			renderer.domElement.clientHeight;
 	camera.updateProjectionMatrix();
+
+	// update controls
+	orbitcontrols.update();
+	cursor.visual_sync();
 
 	// render the scene as seen through camera.
 	renderer.render(scene, camera);
