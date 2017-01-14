@@ -386,23 +386,23 @@ kinematik.KinematicLink.prototype.visual_init = function(camera, renderer, scene
 		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS, 1),
 		KINEMATIK_KINEMATICLINK_MATERIAL_A),
 
-			jointouter: new THREE.Mesh( new THREE.BoxGeometry(
+			joint: new THREE.Group()
+		};
+		this.visual.joint.add(new THREE.Mesh( new THREE.BoxGeometry(
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_RADIUS*2,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_HEIGHT,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_OUTER_RADIUS*2),
-		KINEMATIK_KINEMATICLINK_MATERIAL_A),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A));
 
-			jointinner:  new THREE.Mesh( new THREE.BoxGeometry(
+		this.visual.joint.add(new THREE.Mesh( new THREE.BoxGeometry(
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_RADIUS*2,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_HEIGHT,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_PRISMATIC_INNER_RADIUS*2),
-		KINEMATIK_KINEMATICLINK_MATERIAL_A)
-		};
+		KINEMATIK_KINEMATICLINK_MATERIAL_A));
 
 		scene.add(this.visual.shaft);
 		scene.add(this.visual.shaft2);
-		scene.add(this.visual.jointouter);
-		scene.add(this.visual.jointinner);
+		scene.add(this.visual.joint);
 
 	} else {
 		// if the joint type is anything else it is assumed to
@@ -420,22 +420,22 @@ kinematik.KinematicLink.prototype.visual_init = function(camera, renderer, scene
 		KINEMATIK_KINEMATICLINK_GEOMETRY_SHAFT_THICKNESS, 1),
 		KINEMATIK_KINEMATICLINK_MATERIAL_A),
 
-			jointouter:  new THREE.Mesh( new THREE.CylinderGeometry(
+			joint: new THREE.Group()
+		};
+		this.visual.joint.add(new THREE.Mesh( new THREE.CylinderGeometry(
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_RADIUS,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_RADIUS,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_OUTER_HEIGHT, 12),
-		KINEMATIK_KINEMATICLINK_MATERIAL_A),
+		KINEMATIK_KINEMATICLINK_MATERIAL_A));
 
-			jointinner:  new THREE.Mesh( new THREE.CylinderGeometry(
+		this.visual.joint.add( new THREE.Mesh( new THREE.CylinderGeometry(
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_RADIUS,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_RADIUS,
 		KINEMATIK_KINEMATICLINK_GEOMETRY_JOINT_REVOLUTE_INNER_HEIGHT, 12),
-		KINEMATIK_KINEMATICLINK_MATERIAL_A)
-		};
+		KINEMATIK_KINEMATICLINK_MATERIAL_A));
 
 		scene.add(this.visual.shaft);
-		scene.add(this.visual.jointouter);
-		scene.add(this.visual.jointinner);
+		scene.add(this.visual.joint);
 	}
 
 	// initialise visual for associated frame.
@@ -524,18 +524,12 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 	// the joint of link i is attached at the end of link i-1, which is
 	// toe of shaftvector. The axis is aligned with z_i-1.
 
-	this.visual.jointinner.visible = 
-	this.visual.jointouter.visible =
+	this.visual.joint.visible =
 	this.prev instanceof kinematik.KinematicLink;
 
-	this.visual.jointinner.position.fromArray(toe);
-	this.visual.jointinner.up.fromArray(prevframe.axis[2]);
-	this.visual.jointinner.lookAt(new THREE.Vector3().fromArray(
-			v4add(toe, prevframe.axis[0])));
-
-	this.visual.jointouter.position.fromArray(toe);
-	this.visual.jointouter.up.fromArray(prevframe.axis[2]);
-	this.visual.jointouter.lookAt(new THREE.Vector3().fromArray(
+	this.visual.joint.position.fromArray(toe);
+	this.visual.joint.up.fromArray(prevframe.axis[2]);
+	this.visual.joint.lookAt(new THREE.Vector3().fromArray(
 			v4add(toe, prevframe.axis[0])));
 
 	// finally, also sync the visual for the associated frame
@@ -557,8 +551,7 @@ kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, sce
 
 	scene.remove(this.visual.shaft);
 	
-	scene.remove(this.visual.jointinner);
-	scene.remove(this.visual.jointouter);
+	scene.remove(this.visual.joint);
 
 	this.visual = null;
 }
@@ -566,7 +559,7 @@ kinematik.KinematicLink.prototype.visual_remove = function(camera, renderer, sce
 </script>
 
 
-<!-- main.js -->
+<!-- cursor.js -->
 <script>
 // declarations for user interaction
 function Cursor(camera, renderer, scene){
@@ -578,6 +571,9 @@ function Cursor(camera, renderer, scene){
 
 	this.q2d = [0, 0];
 	this.q3d = [0, 0, 0, 1];
+
+	this.marker2d = [0, 0];
+	this.marker3d = [0, 0, 0, 1];
 
 	this.visual = null;
 
@@ -598,35 +594,84 @@ Cursor.prototype.visual_init = function(camera, renderer, scene){
 		return;
 	}
 	this.visual = {};
+	
+	// placeholder: sphere marks location of cursor.
+	this.visual.centre = new THREE.Mesh(
+			new THREE.SphereGeometry(0.01, 32, 32),
+			new THREE.MeshBasicMaterial({color: 0x666666 })
+			);
+	scene.add(this.visual.centre);
 }
 Cursor.prototype.visual_sync = function(){
 	if (this.visual === null) {
 		console.log("! call to visual_sync without intialised visual");
 		return;
 	}
+	this.visual.centre.position.fromArray(this.q3d);
 }
-Cursor.prototype.mousemovehandler = function(e) {
-	// update cursor position in screen coordinates.
-	// note that we use the coordinate convention of the canvas (-1 to 1)
-	// as opposed to the DOM.
+Cursor.prototype.q2d_fromevent = function(e){
+	// 2d (screen space) coordinates from mouse event.
+	//
+	// we use the canvas convention of coordinates with origin
+	// at centre of element & coordinates normalised to
+	// (-1, 1) along both axes.
+
 	this.q2d[0] = e.clientX/e.target.clientWidth*2-1;
 	this.q2d[1] = -e.clientY/e.target.clientHeight*2+1;
+}
+Cursor.prototype.q3d_fromevent = function(e) {
 
-	// update the raycaster.
+	var q2d = [e.clientX/e.target.clientWidth*2-1,
+	-e.clientY/e.target.clientHeight*2+1];
+
+	// 3d (scene space) coordinates:
+	//
+	// a raycaster obtains a ray onto which the current
+	// location of the 3d cursor is projected.
+
 	this.raycaster.setFromCamera(
-			new THREE.Vector2().fromArray(this.q2d),
+			new THREE.Vector2().fromArray(q2d),
 			this.camera);
-	var intersects = this.raycaster.intersectObjects(scene.children);
 
-	for ( var i = 0; i < intersects.length; ++i) {
-		intersects[i].object.material.color.set(0xff0000);
-	}
+	var directionvector = [
+		this.raycaster.ray.direction.x,
+		this.raycaster.ray.direction.y,
+		this.raycaster.ray.direction.z, 1];
+
+	var origin = [
+		this.raycaster.ray.origin.x,
+		this.raycaster.ray.origin.y,
+		this.raycaster.ray.origin.z, 1];
+
+	var displacementvector = v4sub(this.q3d, origin);
+	this.q3d = v4add(origin,
+		displacementvector.v4projontovector(directionvector));
+
+}
+Cursor.prototype.mousemovehandler = function(e){
+	this.q2d_fromevent(e);
+
+}
+Cursor.prototype.mousedownhandler = function(e) {
+	this.q2d_fromevent(e);
+	this.q3d_fromevent(e);
+
+}
+Cursor.prototype.wheelhandler = function(e) {
+	this.q2d_fromevent(e);
 }
 Cursor.prototype.attachhandlers = function(camera, renderer, scene) {
 	renderer.domElement.addEventListener("mousemove",
 			this.mousemovehandler.bind(this));
+	renderer.domElement.addEventListener("mousedown",
+			this.mousedownhandler.bind(this));
+	renderer.domElement.addEventListener("wheel",
+			this.mousedownhandler.bind(this));
 }
+</script>
 
+<!-- main.js -->
+<script>
 var cursor;
 
 // declarations for THREE
@@ -682,6 +727,25 @@ function init(){
 	manipulator = new kinematik.KinematicChain();
 	manipulator.visual_init(camera, renderer, scene);
 
+	
+	var nextjq = [0, 0, 0, 1];
+	var nextjz = [0, 0, 0, 1];
+	for (var i = 0; i < 6; ++i) {
+		nextjq.v4add(
+		[Math.random(), Math.random(), Math.random(), 1].v4mul(0.15));
+		nextjz = [Math.random(), Math.random(), Math.random(), 1];
+
+		manipulator.pushlink();
+		manipulator.links[i].data_fromjoint({
+			jointtype: (Math.random() > 0.5 ? 1 : 2),
+			jointlocation: nextjq,
+			jointaxis: nextjz
+		});
+	}
+	manipulator.visual_init(camera, renderer, scene);
+	
+
+
 	// init interaction
 	cursor = new Cursor(camera, renderer, scene);
 	cursor.visual_init(camera, renderer, scene);
@@ -701,7 +765,6 @@ function render(){
 
 	// update controls
 	orbitcontrols.update();
-	cursor.visual_sync();
 
 	// render the scene as seen through camera.
 	renderer.render(scene, camera);
@@ -713,6 +776,7 @@ function timestep(){
 
 	manipulator.data_fromDH(null);
 	manipulator.visual_sync();
+	cursor.visual_sync();
 
 	requestAnimationFrame(timestep);
 
