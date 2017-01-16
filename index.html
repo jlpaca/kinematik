@@ -33,14 +33,21 @@ function Orbitcontrols(camera, renderer, scene){
 	this.camera = camera;
 	this.renderer = renderer;
 
-	this.state = 
+	this.dragstart = [0, 0];
 
-	// spherical coordinate data
+	// records whether and how mouse events affect
+	// movement of camera.
+	this.state = {
+		rotation: false,
+		translation: false
+		};
+
+	// the position of the camera in spherical coords.
 	this.qspherical = {
 		o: [0, 0, 0, 1],	// origin
 		r: 2,	// radial distance
 		t: 0,	// azimuth
-		f: 0	// elevation
+		f: Math.PI/2	// elevation
 	};
 
 
@@ -48,19 +55,69 @@ function Orbitcontrols(camera, renderer, scene){
 
 	return this;
 }
+Orbitcontrols.prototype.qspherical_fromcamera = function(){
+	var q = v4fromTHREEVector3(
+	this.camera.position).v4sub(this.qspherical.o);
+
+}
+Orbitcontrols.prototype.camera_fromqspherical = function(newsphq){
+
+	// if new coordinates are supplied, update the spherical
+	// coordinates to agree with the new ones. If this method
+	// is called w/o argument, then it just syncs the camera
+	// position with the stored spherical coords.
+	if (newsphq.o !== undefined) { this.qspherical.o = newsphq.o; }
+	if (newsphq.r !== undefined) { this.qspherical.r = newsphq.r; }
+	if (newsphq.t !== undefined) { this.qspherical.t = newsphq.t; }
+	if (newsphq.f !== undefined) { this.qspherical.f = newsphq.f; }
+
+	// calculate cartesian coordinates from spherical ones
+	// and assign the result to the camera position.
+	var newq = [
+		this.qspherical.r*Math.cos(this.qspherical.f)
+			*Math.cos(this.qspherical.t),
+		this.qspherical.r*Math.cos(this.qspherical.f)
+			*Math.sin(this.qspherical.t),
+		this.qspherical.r*Math.sin(this.qspherical.f),
+		1
+	];
+	this.camera.position.fromArray(newq);
+	
+}
 
 Orbitcontrols.prototype.mousedownhandler = function(e){
 	var q2d = [
 		e.clientX/e.target.clientWidth*2-1,
 		-e.clientY/e.target.clientHeight*2+1];
-	//console.log(q2d);
+
+	// if the camera is not already being moved, and the MMB is down,
+	// set the state such that mouse movement moves camera.
+	if ((e.which == 2) && !(this.state.translation || this.state.rotation)){
+		this.dragstart = q2d;
+
+		(e.shiftKey) ?
+		this.state.translation = true :
+		this.state.rotation = true;
+	}
 }
 
 Orbitcontrols.prototype.mousemovehandler = function(e){
+	// if currently moving the camera, calculate movement accordingly
+	if (this.state.rotation || this.state.translation) {
+		var dq2d = [
+			(e.clientX/e.target.clientWidth*2-1) - this.dragstart[0],
+			(1-e.clientY/e.target.clientHeight*2) - this.dragstart[1]
+		];
+	}
+}
+
+Orbitcontrols.prototype.mouseuphandler = function(e){
 	var q2d = [
 		e.clientX/e.target.clientWidth*2-1,
 		-e.clientY/e.target.clientHeight*2+1];
-	//console.log(q2d);
+
+	this.state.translation = false;
+	this.state.rotation = false;
 }
 
 Orbitcontrols.prototype.attachhandlers = function(camera, renderer, scene){
@@ -68,6 +125,8 @@ Orbitcontrols.prototype.attachhandlers = function(camera, renderer, scene){
 			"mousedown", this.mousedownhandler.bind(this));
 	renderer.domElement.addEventListener(
 			"mousemove", this.mousemovehandler.bind(this));
+	renderer.domElement.addEventListener(
+			"mouseup", this.mouseuphandler.bind(this));
 }
 
 </script>
@@ -166,7 +225,7 @@ Cursor.prototype.q3d_fromevent = function(e) {
 }
 Cursor.prototype.mousemovehandler = function(e){
 	this.q2d_fromevent(e);
-
+	//this.q3d_fromevent(e);
 }
 Cursor.prototype.mousedownhandler = function(e) {
 	this.q2d_fromevent(e);
@@ -182,7 +241,7 @@ Cursor.prototype.attachhandlers = function(camera, renderer, scene) {
 	renderer.domElement.addEventListener("mousedown",
 			this.mousedownhandler.bind(this));
 	renderer.domElement.addEventListener("wheel",
-			this.mousedownhandler.bind(this));
+			this.wheelhandler.bind(this));
 }
 </script>
 
@@ -229,9 +288,8 @@ function initTHREE(){
 	scene.add(directionallight);
 
 
-	// append canvas to document
-	document.body.appendChild(renderer.domElement);
-
+	// suppress mouse events
+	renderer.domElement.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 }
 
 // declarations for kinematik
@@ -337,6 +395,9 @@ function timestep(){
 	manipulator.visual_sync();
 
 	cursor.visual_sync();
+
+	// testing orbitcontrols
+	orbitcontrols.camera_fromqspherical({ t: _t });
 
 	requestAnimationFrame(timestep);
 
