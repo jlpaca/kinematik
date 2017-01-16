@@ -154,7 +154,9 @@ Frame.prototype.transform_mat4set = function(T){
 	for (var i = 0; i < 3; ++i) { this.axis[i][j] = T[j][i]; }}
 }
 
-
+// localtoglobal:	expresses a vector in the local frame in the global
+// 			(standard) basis.
+//
 Frame.prototype.localtoglobal = function(v){
 	var ret = this.o.v4clone();
 	for (var i = 0; i < 3; ++i) {
@@ -163,6 +165,8 @@ Frame.prototype.localtoglobal = function(v){
 	return ret;
 }
 
+// globaltolocal:	express a vector in the global (inertial) frame in the
+// 			local frame.
 Frame.prototype.globaltolocal = function(v){
 	v.v4sub(this.o);
 	var ret = [0, 0, 0, 1];
