@@ -146,41 +146,22 @@ Cursor.prototype.q3d_fromevent = function(e) {
 
 	// 3d (scene space) coordinates:
 	//
-	// a raycaster obtains a ray onto which the current
-	// location of the 3d cursor is projected.
+	// a ray is cast from cursor coordinates, and this.q3d is
+	// moved to the point on that ray that leaves its distance to
+	// the camera, along the camera's viewing vector, unchanged.
 
 	this.raycaster.setFromCamera(
 			new THREE.Vector2().fromArray(q2d),
 			this.camera);
 
-	var ray = [
-		this.raycaster.ray.direction.x,
-		this.raycaster.ray.direction.y,
-		this.raycaster.ray.direction.z, 1].v4unit();
+	var ray = v4fromTHREEVector3(this.raycaster.ray.direction);
+	var origin = v4fromTHREEVector3(this.raycaster.ray.origin);
+	var cameradirection = v4fromTHREEVector3(this.camera.getWorldDirection());
 
-	var origin = [
-		this.raycaster.ray.origin.x,
-		this.raycaster.ray.origin.y,
-		this.raycaster.ray.origin.z, 1];
+	// the distance down the cast ray to the intersection with the normal plane.
+	var scale = v4dot(cameradirection, v4sub(this.q3d, origin))/v4dot(cameradirection, ray);
 
-	var THREEcameradirection = this.camera.getWorldDirection();
-	var cameradirection = [
-		THREEcameradirection.x,
-		THREEcameradirection.y,
-		THREEcameradirection.z, 1];
-
-	var cosine = v4dot(cameradirection, ray);
-
-	var newq3d = origin.v4add(
-		v4mul(
-			v4dot(cameradirection, v4sub(this.q3d, origin))/cosine,
-			ray
-		));
-
-	this.q3d = newq3d;
-	//var displacementvector = v4sub(this.q3d, origin);
-	//this.q3d = v4add(origin,
-	//	displacementvector.v4projontovector(directionvector));
+	this.q3d = v4add(origin, v4mul(scale, ray));
 
 }
 Cursor.prototype.mousemovehandler = function(e){

@@ -1,5 +1,8 @@
 // adds functions to Array object for vector arithmetic.
 var V4_EPSILON = 1e-6;
+function v4fromTHREEVector3(v){
+	return [v.x, v.y, v.z, 1];
+}
 function v4clone(v){ return [v[0], v[1], v[2], 1]; }
 function v4add(u, v){ return [u[0]+v[0], u[1]+v[1], u[2]+v[2], 1]; }
 function v4sub(u, v){ return [u[0]-v[0], u[1]-v[1], u[2]-v[2], 1]; }
@@ -36,6 +39,12 @@ function v4projontoplane(u, n){
 }
 function v4projontovector(u, v){
 	return v4mul(v4dot(u, v)/v4mag2(v), v);
+}
+
+Array.prototype.v4fromTHREEVector3 = function(v){
+	this[0] = v.x; this[1] = v.y;
+	this[2] = v.z; this[3] = 1;
+	return this;
 }
 
 Array.prototype.v4clone = function(v){
