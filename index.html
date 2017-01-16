@@ -26,12 +26,53 @@ html, body {
 <script src="numeric-1.2.6.min.js"></script>
 
 
-<script src="three.orbitcontrols.js"></script>
-
-<script src="v4.js"></script>
+<!--<script src="three.orbitcontrols.js"></script>-->
 <script>
+function Orbitcontrols(camera, renderer, scene){
+	
+	this.camera = camera;
+	this.renderer = renderer;
+
+	this.state = 
+
+	// spherical coordinate data
+	this.qspherical = {
+		o: [0, 0, 0, 1],	// origin
+		r: 2,	// radial distance
+		t: 0,	// azimuth
+		f: 0	// elevation
+	};
+
+
+	this.attachhandlers(camera, renderer, scene);
+
+	return this;
+}
+
+Orbitcontrols.prototype.mousedownhandler = function(e){
+	var q2d = [
+		e.clientX/e.target.clientWidth*2-1,
+		-e.clientY/e.target.clientHeight*2+1];
+	//console.log(q2d);
+}
+
+Orbitcontrols.prototype.mousemovehandler = function(e){
+	var q2d = [
+		e.clientX/e.target.clientWidth*2-1,
+		-e.clientY/e.target.clientHeight*2+1];
+	//console.log(q2d);
+}
+
+Orbitcontrols.prototype.attachhandlers = function(camera, renderer, scene){
+	renderer.domElement.addEventListener(
+			"mousedown", this.mousedownhandler.bind(this));
+	renderer.domElement.addEventListener(
+			"mousemove", this.mousemovehandler.bind(this));
+}
 
 </script>
+
+<script src="v4.js"></script>
 <script src="denavithartenberg.js"></script>
 <script src="frame.js"></script>
 
@@ -112,19 +153,34 @@ Cursor.prototype.q3d_fromevent = function(e) {
 			new THREE.Vector2().fromArray(q2d),
 			this.camera);
 
-	var directionvector = [
+	var ray = [
 		this.raycaster.ray.direction.x,
 		this.raycaster.ray.direction.y,
-		this.raycaster.ray.direction.z, 1];
+		this.raycaster.ray.direction.z, 1].v4unit();
 
 	var origin = [
 		this.raycaster.ray.origin.x,
 		this.raycaster.ray.origin.y,
 		this.raycaster.ray.origin.z, 1];
 
-	var displacementvector = v4sub(this.q3d, origin);
-	this.q3d = v4add(origin,
-		displacementvector.v4projontovector(directionvector));
+	var THREEcameradirection = this.camera.getWorldDirection();
+	var cameradirection = [
+		THREEcameradirection.x,
+		THREEcameradirection.y,
+		THREEcameradirection.z, 1];
+
+	var cosine = v4dot(cameradirection, ray);
+
+	var newq3d = origin.v4add(
+		v4mul(
+			v4dot(cameradirection, v4sub(this.q3d, origin))/cosine,
+			ray
+		));
+
+	this.q3d = newq3d;
+	//var displacementvector = v4sub(this.q3d, origin);
+	//this.q3d = v4add(origin,
+	//	displacementvector.v4projontovector(directionvector));
 
 }
 Cursor.prototype.mousemovehandler = function(e){
@@ -171,7 +227,7 @@ function initTHREE(){
 	
 	// initial position of camera
 	camera.up.set(0, 0, 1);
-	camera.position.z = 10;
+	camera.position.z = 2;
 
 	// initialise renderer and scene
 	renderer = new THREE.WebGLRenderer({ canvas: canvas });
@@ -206,7 +262,8 @@ function init(){
 	manipulator = new kinematik.KinematicChain();
 	manipulator.visual_init(camera, renderer, scene);
 
-	
+	// COMMENTED OUT: code to generate a random manipulator.
+	/*
 	var nextjq = [0, 0, 0, 1];
 	var nextjz = [0, 0, 0, 1];
 	for (var i = 0; i < 6; ++i) {
@@ -222,14 +279,55 @@ function init(){
 		});
 	}
 	manipulator.visual_init(camera, renderer, scene);
-	
+	*/
 
+
+	// typical anthropomorphic manipulator:
+	for (var i = 0; i < 6; ++i) { manipulator.pushlink(); }
+	manipulator.links[0].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0, 0, 0.1, 1],
+		jointaxis: [0, 0, 1, 1] });
+
+	manipulator.links[1].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0.12, 0, 0.2, 1],
+		jointaxis: [1, 0, 0, 1] });
+
+	manipulator.links[2].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0.1, 0, 0.6, 1],
+		jointaxis: [1, 0, 0, 1] });
+
+	manipulator.links[3].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0, 0.1, 0.7, 1],
+		jointaxis: [0, 1, 0, 1] });
+
+	manipulator.links[4].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0, 0.3, 0.7, 1],
+		jointaxis: [0, 1, 0, 1] });
+
+	manipulator.links[4].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0, 0.3, 0.7, 1],
+		jointaxis: [1, 0, 0, 1] });
+
+	manipulator.links[5].data_fromjoint({
+		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
+		jointlocation: [0, 0.3, 0.7, 1],
+		jointaxis: [0, 1, 0, 1] });
+
+	manipulator.visual_init(camera, renderer, scene);
 
 	// init interaction
 	cursor = new Cursor(camera, renderer, scene);
 	cursor.visual_init(camera, renderer, scene);
 
-	orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
+	orbitcontrols = new Orbitcontrols(camera, renderer, scene);
+
+	//orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
 
 }
 
@@ -243,7 +341,8 @@ function render(){
 	camera.updateProjectionMatrix();
 
 	// update controls
-	orbitcontrols.update();
+	
+	// orbitcontrols.update();
 
 	// render the scene as seen through camera.
 	renderer.render(scene, camera);
@@ -255,6 +354,7 @@ function timestep(){
 
 	manipulator.data_fromDH(null);
 	manipulator.visual_sync();
+
 	cursor.visual_sync();
 
 	requestAnimationFrame(timestep);
