@@ -125,8 +125,11 @@ Cursor.prototype.mousemovehandler = function(e){
 	//this.q3d_fromevent(e);
 }
 Cursor.prototype.mousedownhandler = function(e){
-	this.q2d_fromevent(e);
-	this.q3d_fromevent(e);
+	// move the cursor if it's the relevant button
+	if (e.which == 1) { // LMB
+		this.q2d_fromevent(e);
+		this.q3d_fromevent(e);
+	}
 
 }
 Cursor.prototype.wheelhandler = function(e){

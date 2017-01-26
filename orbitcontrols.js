@@ -128,6 +128,10 @@ Orbitcontrols.prototype.mouseuphandler = function(e){
 	this.state.rotation = false;
 }
 
+Orbitcontrols.prototype.wheelhandler = function(e){
+	this.qspherical.r = Math.max(0, this.qspherical.r + e.deltaY*0.002);
+}
+
 Orbitcontrols.prototype.attachhandlers = function(camera, renderer, scene){
 	renderer.domElement.addEventListener(
 			"mousedown", this.mousedownhandler.bind(this));
@@ -135,6 +139,8 @@ Orbitcontrols.prototype.attachhandlers = function(camera, renderer, scene){
 			"mousemove", this.mousemovehandler.bind(this));
 	renderer.domElement.addEventListener(
 			"mouseup", this.mouseuphandler.bind(this));
+	renderer.domElement.addEventListener(
+			"wheel", this.wheelhandler.bind(this));
 }
 
 Orbitcontrols.prototype.update = function(){
