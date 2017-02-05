@@ -76,7 +76,7 @@ Orbitcontrols.prototype.camera_fromqspherical = function(newsphq){
 			*Math.sin(this.qspherical.t),
 		this.qspherical.r*Math.sin(this.qspherical.f),
 		1
-	];
+	].v4add(this.qspherical.o);
 	this.camera.position.fromArray(newq);
 
 	this.camera.lookAt(new THREE.Vector3().fromArray(this.qspherical.o));
@@ -108,10 +108,23 @@ Orbitcontrols.prototype.mousemovehandler = function(e){
 		(e.clientX/e.target.clientWidth*2-1) - this.dragstart.q2d[0],
 		(1-e.clientY/e.target.clientHeight*2) - this.dragstart.q2d[1]
 	];
-
+	var aspect = e.target.clientHeight/e.target.clientWidth;
 	if (this.state.rotation) {
 		this.qspherical.t = this.dragstart.qspherical.t - 4*dq2d[0];
-		this.qspherical.f = this.dragstart.qspherical.f - 2*dq2d[1];
+		this.qspherical.f = this.dragstart.qspherical.f - 4*aspect*dq2d[1];
+	}
+	if (this.state.translation) {
+		var dx = v4fromTHREEVector3(
+			(new THREE.Vector3(1, 0, 0)).applyEuler(
+			this.camera.rotation));
+		var dy = v4fromTHREEVector3(
+			(new THREE.Vector3(0, 1, 0)).applyEuler(
+			this.camera.rotation));
+		this.qspherical.o = v4add(this.dragstart.qspherical.o,
+		v4add(
+			v4mul(-this.qspherical.r*dq2d[0], dx),
+			v4mul(-this.qspherical.r*aspect*dq2d[1], dy))
+		);
 	}
 }
 
