@@ -41,7 +41,6 @@ function Frame(){
 	return this;	
 }
 
-
 // visual_init:	creates webGL objects to represent the frame in a webGL context
 //		as specified by parameters passed in. (camera, renderer, and scene
 //		are always passed, in that order, to functions that require any one
@@ -153,6 +152,14 @@ Frame.prototype.transform_mat4set = function(T){
 	for (var j = 0; j < 3; ++j) { this.o[j] = T[j][3];
 	for (var i = 0; i < 3; ++i) { this.axis[i][j] = T[j][i]; }}
 }
+
+// transform_frameset:	matches the global transformation of this frame with
+// 			another frame
+Frame.prototype.transform_frameset = function(f){
+	for (var j = 0; j < 3; ++j) { this.o[j] = f.o[j];
+	for (var i = 0; i < 3; ++i) { this.axis[i][j] = f.axis[i][j]; }}
+}
+
 
 // transform_push:	applies a transformation and axis-angle rotation to
 // 			the frame. Notice that axis-angle rotations are not
