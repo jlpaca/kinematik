@@ -51,6 +51,8 @@ function Cursor(camera, renderer, scene){
 	this.marker2d = [0, 0];
 	this.marker3d = [0, 0, 0, 1];
 
+	this.frame = new Frame();
+
 	this.visual = null;
 
 	this.attachhandlers(camera, renderer, scene);
@@ -77,6 +79,9 @@ Cursor.prototype.visual_init = function(camera, renderer, scene){
 			new THREE.MeshBasicMaterial({color: 0x666666 })
 			);
 	scene.add(this.visual.centre);
+
+	// also initalise visuals for associated frame
+	this.frame.visual_init(camera, renderer, scene);
 }
 Cursor.prototype.visual_sync = function(){
 	if (this.visual === null) {
@@ -84,6 +89,8 @@ Cursor.prototype.visual_sync = function(){
 		return;
 	}
 	this.visual.centre.position.fromArray(this.q3d);
+
+	this.frame.visual_sync();
 }
 Cursor.prototype.q2d_fromevent = function(e){
 	// 2d (screen space) coordinates from mouse event.
@@ -95,6 +102,7 @@ Cursor.prototype.q2d_fromevent = function(e){
 	this.q2d[0] = e.clientX/e.target.clientWidth*2-1;
 	this.q2d[1] = -e.clientY/e.target.clientHeight*2+1;
 }
+
 Cursor.prototype.q3d_fromevent = function(e) {
 
 	var q2d = [e.clientX/e.target.clientWidth*2-1,
@@ -119,9 +127,11 @@ Cursor.prototype.q3d_fromevent = function(e) {
 
 	this.q3d = v4add(origin, v4mul(scale, ray));
 
+	this.frame.transform_set(this.q3d, null);
+
 }
 Cursor.prototype.mousemovehandler = function(e){
-	this.q2d_fromevent(e);
+	//this.q2d_fromevent(e);
 	//this.q3d_fromevent(e);
 }
 Cursor.prototype.mousedownhandler = function(e){

@@ -154,6 +154,53 @@ Frame.prototype.transform_mat4set = function(T){
 	for (var i = 0; i < 3; ++i) { this.axis[i][j] = T[j][i]; }}
 }
 
+// transform_push:	applies a transformation and axis-angle rotation to
+// 			the frame. Notice that axis-angle rotations are not
+// 			commutative.
+//
+// 			If either or both of the parameters are false, the
+// 			relevant property of the frame is left unchanged.
+Frame.prototype.transform_push = function(t, r){
+	if (t) { this.o = v4add(this.o, t); }
+	if (r) {
+		// Rodrigues rotation formula
+		var theta = v4mag(r);
+		var c = Math.cos(theta);
+		var s = Math.sin(theta);
+		var k = v4unit(r);
+
+		for (var i = 0; i < 3; ++i) {
+			this.axis[i] =
+			v4mul(c, this.axis[i]).v4add(
+			v4x(k, this.axis[i]).v4mul(s)).v4add(
+			v4mul(v4dot(k, this.axis[i])*(1-c), k));
+		}
+	}
+}
+
+// transform_set:	sets the transformation and axis-angle rotation of the
+// 			frame, w.r.t. inertial frame.
+//
+// 			If either or both of the parameters are false, the
+// 			relevant property of the frame is left unchanged.
+Frame.prototype.transform_set = function(t, r){
+	if (t) { this.o = t.v4clone(); }
+	if (r) {
+		var theta = v4mag(r);
+		var c = Math.cos(theta);
+		var s = Math.sin(theta);
+		var k = v4unit(r);
+
+		for (var i = 0; i < 3; ++i) {
+			var v = [0, 0, 0, 1]; v[i] = 1;
+			this.axis[i] =
+			v4mul(c, v).v4add(
+			v4x(k, v).v4mul(s)).v4add(
+			v4mul(v4dot(k, v)*(1-c), k));
+		}
+	}
+}
+
 // localtoglobal:	expresses a vector in the local frame in the global
 // 			(standard) basis.
 //
