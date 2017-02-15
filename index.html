@@ -55,7 +55,8 @@ function Cursor(camera, renderer, scene){
 
 	this.state = {
 		translation: false,
-		rotation: false
+		rotation: false,
+		axis: null
 	};
 
 	this.frame = new Frame();
@@ -147,6 +148,25 @@ Cursor.prototype.q2d_setfromevent = function(e){ this.q2d = this.q2d_fromevent(e
 Cursor.prototype.keydownhandler = function(e){
 	console.log("keydown: " + e.which);
 
+	if (e.which == 27) { // ESC
+
+		// abort motion
+		this.frame.transform_frameset(this.prevframe);
+
+		// reset state
+		this.state.translation = false;
+		this.state.rotation = false;
+		this.state.axis = null;
+	}
+	if (e.which == 82) { // RKEY
+		this.state.translation = false;
+		this.state.rotation = true;
+
+		// record current state
+		this.marker2d = this.q2d;
+		this.marker3d = this.q3d;
+		this.prevframe.transform_frameset(this.frame);
+	}
 	if (e.which == 84) { // TKEY
 		this.state.translation = true;
 		this.state.rotation = false;
@@ -155,6 +175,19 @@ Cursor.prototype.keydownhandler = function(e){
 		this.marker2d = this.q2d;
 		this.marker3d = this.q3d;
 		this.prevframe.transform_frameset(this.frame);
+	}
+	// X, Y, Z keys
+	if (e.which == 88) {
+		if (this.state.translation || this.state.rotation) {
+		this.state.axis = this.frame.axis[0]; }
+	}
+	if (e.which == 89) {
+		if (this.state.translation || this.state.rotation) {
+		this.state.axis = this.frame.axis[1]; }
+	}
+	if (e.which == 90) {
+		if (this.state.translation || this.state.rotation) {
+		this.state.axis = this.frame.axis[2]; }
 	}
 }
 Cursor.prototype.keyuphandler = function(e){
@@ -167,9 +200,14 @@ Cursor.prototype.mousemovehandler = function(e){
 	this.q3d_setfromevent(e, this.q2d);
 
 	if (this.state.translation) {
-		// compute moved distance
+		var delta = v4sub(this.q3d, this.marker3d);
+		if (this.state.axis) {
+			delta = v4mul(
+				v4dot(this.state.axis, delta),
+				this.state.axis);
+		}
 		this.frame.transform_set(
-		v4add(this.prevframe.o, v4sub(this.q3d, this.marker3d)),
+		v4add(this.prevframe.o, delta),
 		null);
 
 	} else {
@@ -180,11 +218,11 @@ Cursor.prototype.mousedownhandler = function(e){
 	this.q2d_setfromevent(e);
 	this.q3d_setfromevent(e, this.q2d);
 
-	if (this.state.translation) {
-		this.state.translation = false;
+	if (this.state.translation || this.state.rotation) {
 
-	} else if (this.state.rotation) {
+		this.state.translation = false;
 		this.state.rotation = false;
+		this.state.axis = null;
 
 	} else {
 		// no special state actions.
