@@ -148,35 +148,11 @@ Cursor.prototype.q2d_setfromevent = function(e){ this.q2d = this.q2d_fromevent(e
 Cursor.prototype.keydownhandler = function(e){
 	console.log("keydown: " + e.which);
 
-	if (e.which == 27) { // ESC
+	if (e.which == 27) { this.action_abort(); }		// ESC
+	if (e.which == 82) { this.rotation_start(); }		// RKEY
+	if (e.which == 84) { this.translation_start(); }	// TKEY
 
-		// abort motion
-		this.frame.transform_frameset(this.prevframe);
-
-		// reset state
-		this.state.translation = false;
-		this.state.rotation = false;
-		this.state.axis = null;
-	}
-	if (e.which == 82) { // RKEY
-		this.state.translation = false;
-		this.state.rotation = true;
-
-		// record current state
-		this.marker2d = this.q2d;
-		this.marker3d = this.q3d;
-		this.prevframe.transform_frameset(this.frame);
-	}
-	if (e.which == 84) { // TKEY
-		this.state.translation = true;
-		this.state.rotation = false;
-
-		// record current state
-		this.marker2d = this.q2d;
-		this.marker3d = this.q3d;
-		this.prevframe.transform_frameset(this.frame);
-	}
-	// X, Y, Z keys
+	// X, Y, Z keys set axis
 	if (e.which == 88) {
 		if (this.state.translation || this.state.rotation) {
 		this.state.axis = this.frame.axis[0]; }
@@ -190,51 +166,29 @@ Cursor.prototype.keydownhandler = function(e){
 		this.state.axis = this.frame.axis[2]; }
 	}
 }
-Cursor.prototype.keyuphandler = function(e){
-
-}
 
 Cursor.prototype.mousemovehandler = function(e){
-	// always track
+	// always track where the mouse is, in both
+	// screen and scene space.
 	this.q2d_setfromevent(e);
 	this.q3d_setfromevent(e, this.q2d);
 
-	if (this.state.translation) {
-		var delta = v4sub(this.q3d, this.marker3d);
-		if (this.state.axis) {
-			delta = v4mul(
-				v4dot(this.state.axis, delta),
-				this.state.axis);
-		}
-		this.frame.transform_set(
-		v4add(this.prevframe.o, delta),
-		null);
-
-	} else {
-
-	}
+	if (this.state.translation) { this.translation_sync(); }
+	if (this.state.rotation) { this.rotation_sync(); }
 }
 Cursor.prototype.mousedownhandler = function(e){
 	this.q2d_setfromevent(e);
 	this.q3d_setfromevent(e, this.q2d);
 
-	if (this.state.translation || this.state.rotation) {
-
-		this.state.translation = false;
-		this.state.rotation = false;
-		this.state.axis = null;
-
+	if (this.state.translation || this.state.rotation) { this.action_apply();
 	} else {
 		// no special state actions.
-		// move the cursor if it's the relevant button
-		if (e.which == 1) { // LMB
+		// move the cursor upon LMB click.
+		if (e.which == 1) {
 			this.frame.transform_set(this.q3d, null);
 		}
 	}
 	
-}
-Cursor.prototype.mouseuphandler = function(e){
-
 }
 Cursor.prototype.wheelhandler = function(e){
 	this.q2d_fromevent(e);
@@ -242,18 +196,62 @@ Cursor.prototype.wheelhandler = function(e){
 Cursor.prototype.attachhandlers = function(camera, renderer, scene) {
 	window.addEventListener("keydown",
 			this.keydownhandler.bind(this));
-	window.addEventListener("keyup",
-			this.keyuphandler.bind(this));
 
 	renderer.domElement.addEventListener("mousemove",
 			this.mousemovehandler.bind(this));
 	renderer.domElement.addEventListener("mousedown",
 			this.mousedownhandler.bind(this));
-	renderer.domElement.addEventListener("mouseup",
-			this.mouseuphandler.bind(this));
 	renderer.domElement.addEventListener("wheel",
 			this.wheelhandler.bind(this));
 }
+
+Cursor.prototype.translation_start = function(){
+	this.state.translation = true;
+	this.state.rotation = false;
+
+	this.marker2d = this.q2d;
+	this.marker3d = this.q3d;
+	this.prevframe.transform_frameset(this.frame);
+}
+Cursor.prototype.translation_sync = function(){
+	var delta = v4sub(this.q3d, this.marker3d);
+	if (this.state.axis) {
+		delta = v4mul(
+			v4dot(this.state.axis, delta),
+			this.state.axis);
+	}
+	this.frame.transform_set(
+	v4add(this.prevframe.o, delta),
+	null);
+}
+Cursor.prototype.rotation_start = function(){
+	this.state.translation = false;
+	this.state.rotation = true;
+
+	this.marker2d = this.q2d;
+	this.marker3d = this.q3d;
+	this.prevframe.transform_frameset(this.frame);
+}
+Cursor.prototype.rotation_sync = function(){
+
+}
+Cursor.prototype.action_apply = function(){
+	// remove all the state tags and leave the frame
+	// in the state of the latest update.
+	this.state.translation = false;
+	this.state.rotation = false;
+	this.state.axis = null;
+}
+Cursor.prototype.action_abort = function(){
+	// restore configuration of frame
+	this.frame.transform_frameset(this.prevframe);
+
+	// reset state
+	this.state.translation = false;
+	this.state.rotation = false;
+	this.state.axis = null;
+}
+
 Cursor.prototype.update = function(){
 
 }
