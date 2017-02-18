@@ -43,6 +43,8 @@ function Cursor(camera, renderer, scene){
 	this.camera = camera;
 	this.renderer = renderer;
 
+	this.cameradirection = v4fromTHREEVector3(this.camera.getWorldDirection());
+
 	this.raycaster = new THREE.Raycaster();
 
 	// current coordinates of the /mouse/ (not the 3d cursor)
@@ -52,6 +54,8 @@ function Cursor(camera, renderer, scene){
 	// be returned to if the operation is aborted.
 	this.marker2d = [0, 0];
 	this.marker3d = [0, 0, 0, 1];
+	// keep record of the projected location of the origin of the frame
+	this.rotationorigin = [0, 0];
 
 	this.state = {
 		translation: false,
@@ -131,11 +135,12 @@ Cursor.prototype.q3d_fromevent = function(e, ref) {
 
 	var ray = v4fromTHREEVector3(this.raycaster.ray.direction);
 	var origin = v4fromTHREEVector3(this.raycaster.ray.origin);
-	var cameradirection = v4fromTHREEVector3(this.camera.getWorldDirection());
+
+	this.cameradirection = v4fromTHREEVector3(this.camera.getWorldDirection());
 
 	// the distance down the cast ray to the intersection with the normal plane.
-	var scale = v4dot(cameradirection, v4sub(this.q3d, origin))/
-	v4dot(cameradirection, ray);
+	var scale = v4dot(this.cameradirection, v4sub(this.q3d, origin))/
+	v4dot(this.cameradirection, ray);
 
 	return v4add(origin, v4mul(scale, ray));
 }
@@ -228,12 +233,33 @@ Cursor.prototype.rotation_start = function(){
 	this.state.translation = false;
 	this.state.rotation = true;
 
+	//this.state.axis = v4fromTHREEVector3(this.camera.getWorldDirection());
+	this.state.axis = this.cameradirection;
+
 	this.marker2d = this.q2d;
 	this.marker3d = this.q3d;
 	this.prevframe.transform_frameset(this.frame);
+
+	var vcentre =
+	(new THREE.Vector3()).fromArray(this.frame.o).project(camera);
+	this.rotationorigin = [ vcentre.x, vcentre.y ];
 }
 Cursor.prototype.rotation_sync = function(){
 
+	cameradirection = v4fromTHREEVector3(
+		this.camera.getWorldDirection()).v4unit();
+
+	var v1 = v4sub(this.q2d ,this.rotationorigin);
+	v1[2] = 0; v1[3] = 1;
+	var v2 = v4sub(this.marker2d ,this.rotationorigin);
+	v2[2] = 0; v2[3] = 1;
+
+	var theta = v4ang(v2, v1, [0, 0, 1, 1])*
+	(v4dot(this.cameradirection, this.state.axis) < 0 ? -1 : 1);
+	
+	this.frame.transform_frameset(this.prevframe);
+	this.frame.transform_push(
+	null, v4mul(theta, this.state.axis));
 }
 Cursor.prototype.action_apply = function(){
 	// remove all the state tags and leave the frame
