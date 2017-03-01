@@ -185,8 +185,6 @@ kinematik.KinematicLink.prototype.data_fromjoint = function(newjoint){
 	//
 
 	if (v4x(prevframe.axis[2], newjoint.jointaxis).v4epsilon()) {
-		console.log("parallel.");
-
 		var normalvector = v4sub(
 				newjoint.jointlocation,
 				prevframe.o).v4projontoplane(
