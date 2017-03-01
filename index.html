@@ -139,24 +139,25 @@ function init(){
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
 		jointlocation: [0, 0.1, 0.7, 1],
 		jointaxis: [0, 1, 0, 1] });
-
+	
 	manipulator.links[4].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
 		jointlocation: [0, 0.3, 0.7, 1],
 		jointaxis: [1, 0, 0, 1] });
-
+		
 	manipulator.links[5].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
 		jointlocation: [0, 0.3, 0.7, 1],
 		jointaxis: [0, 1, 0, 1] });
 
+	
 	manipulator.links[6].data_fromjoint({
 		jointtype: KINEMATIK_JOINTTYPE_REVOLUTE,
 		jointlocation: [0, 0.4, 0.7, 1],
 		jointaxis: [0, 1, 0, 1] });
-
+		
 	manipulator.visual_init(camera, renderer, scene);
-
+	
 
 	// init interaction with 3d cursor, keyboard controls for joints,
 	// & orbitcontrols for camera movement.
@@ -203,7 +204,7 @@ function timestep(){
 
 	manipulator.data_fromDH(null);
 
-	ik.DLS(cursor.frame);
+	ik.SDLS(cursor.frame);
 		
 
 	requestAnimationFrame(timestep);
