@@ -35,6 +35,7 @@ html, body {
 
 <script src="kinematik.js"></script>
 <script src="kinematik.kbcontrols.js"></script>
+<script src="kinematik.ik.js"></script>
 
 
 <!-- main.js -->
@@ -48,6 +49,7 @@ var scene;
 var cursor;
 var orbitcontrols;
 var kbcontrols;
+var ik
 
 function initTHREE(){
 	// initialise camera
@@ -164,6 +166,7 @@ function init(){
 	orbitcontrols = new Orbitcontrols(camera, renderer, scene);
 
 	kbcontrols = new kinematik.Kbcontrols(manipulator);
+	ik = new kinematik.Ik(manipulator);
 
 }
 
@@ -199,6 +202,16 @@ function timestep(){
 	_t += 0.01;
 
 	manipulator.data_fromDH(null);
+
+	// PLACEHOLDER
+	var iktarg = [
+		cursor.frame.o[0],
+		cursor.frame.o[1],
+		cursor.frame.o[2],
+		0, 0, 1
+	];
+	ik.DLS(iktarg);
+		
 
 	requestAnimationFrame(timestep);
 

@@ -3,8 +3,8 @@
 // 				listens for keypresses and releases, and
 // 				actuates the joints accordingly.
 //
-kinematik.Kbcontrols = function(target){
-	this.target = target;
+kinematik.Kbcontrols = function(subject){
+	this.subject = subject;
 	
 	
 	this.actuate_state = {};
@@ -55,8 +55,8 @@ kinematik.Kbcontrols.prototype.update = function(e){
 	// each timestep, iterate over actuate_state, and inc/dec
 	// each joint that exists & is currently being actuated.
 	for (var i = 1; i < 10; ++i) {
-		if (this.actuate_state[i] && this.target.links[i]) {
-		this.target.links[i].increment(this.actuate_state[i]);
+		if (this.actuate_state[i] && this.subject.links[i]) {
+		this.subject.links[i].increment(this.actuate_state[i]);
 		}
 	}
 }
