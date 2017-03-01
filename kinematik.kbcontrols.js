@@ -17,7 +17,8 @@ kinematik.Kbcontrols = function(target){
 
 	this.dec = {	65: 1, 83: 2, 68: 3, 70: 4, 71: 5,
 			72: 6, 74: 7, 75: 8, 76: 9 };
-	this.increment = 0.02; // default actuation increment per timestep
+	this.increment = 0.05;	// default actuation increment per timestep
+	this.shiftincrement = 0.01;	// actiation increment w/ shiftkey
 
 	this.attachhandlers();
 
@@ -27,15 +28,21 @@ kinematik.Kbcontrols.prototype.attachhandlers = function(){
 	window.addEventListener("keyup", this.keyuphandler.bind(this));
 }
 kinematik.Kbcontrols.prototype.keydownhandler = function(e){
-	// set state for relevant joint
+	// set state for relevant joint. Notice that a second keypress on
+	// the same key overwrites the first one.
 	if (this.inc[e.which]) {
-		this.actuate_state[this.inc[e.which]] = this.increment;
+		this.actuate_state[this.inc[e.which]] = 
+		e.shiftKey ? this.shiftincrement : this.increment;
 	} else if (this.dec[e.which]) {
-		this.actuate_state[this.dec[e.which]] = -this.increment;
+		this.actuate_state[this.dec[e.which]] =
+		e.shiftKey ? -this.shiftincrement : -this.increment;
 	}
 }
 kinematik.Kbcontrols.prototype.keyuphandler = function(e){
-	// set state for relevant joint
+	// the case where a released key already had its effect overwritten
+	// by the effect of a key pressed later is checked for, and the
+	// actuate_state for the joint is only reset if it is currently
+	// under the effect of the key being released.
 	if (this.inc[e.which]) {
 		this.actuate_state[this.inc[e.which]] = 
 		Math.min(this.actuate_state[this.inc[e.which]], 0);
