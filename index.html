@@ -203,14 +203,7 @@ function timestep(){
 
 	manipulator.data_fromDH(null);
 
-	// PLACEHOLDER
-	var iktarg = [
-		cursor.frame.o[0],
-		cursor.frame.o[1],
-		cursor.frame.o[2],
-		0, 0, 1
-	];
-	ik.DLS(iktarg);
+	ik.DLS(cursor.frame);
 		
 
 	requestAnimationFrame(timestep);

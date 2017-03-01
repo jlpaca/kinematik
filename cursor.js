@@ -150,6 +150,7 @@ Cursor.prototype.mousedownhandler = function(e){
 		// move the cursor upon LMB click.
 		if (e.which == 1) {
 			this.frame.transform_set(this.q3d, null);
+
 		}
 	}
 	

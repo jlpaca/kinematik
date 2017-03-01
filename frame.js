@@ -153,6 +153,23 @@ Frame.prototype.transform_mat4set = function(T){
 	for (var i = 0; i < 3; ++i) { this.axis[i][j] = T[j][i]; }}
 }
 
+// transform_mat4get:	returns a 4*4 matrix that is the transformation of this
+// 			frame wrt the reference frame. If no reference frame is
+// 			provided, it is taken as the unit basis & zero origin.
+Frame.prototype.transform_mat4get = function(ref){
+	if (!(ref instanceof Frame)) { ref = new Frame(); }
+	var T = numeric.identity(4);
+	for (var j = 0; j < 3; ++j) { T[j][3] = this.o[j] - ref.o[j]; }
+
+	for (var i = 0; i < 3; ++i) {
+	for (var j = 0; j < 3; ++j) {
+		T[i][j] = v4dot(this.axis[j], ref.axis[i]);
+		// q u e s t i o n a b l e
+	}}
+	return T;
+}
+
+
 // transform_frameset:	matches the global transformation of this frame with
 // 			another frame
 Frame.prototype.transform_frameset = function(f){

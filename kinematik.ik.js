@@ -3,12 +3,21 @@ kinematik.Ik = function(subject){
 }
 
 kinematik.Ik.prototype.DLS = function(target){
-	var iter = 4;
-	var lambda = 0.01;
+	var lambda = 0.05;
+	var max_iter = 12;
+	var it;
+	for (it = 0; it < max_iter; ++it) {
+		if (this.DLSstep(target, lambda)) { break; }
+	}
+	if (it == max_iter-1) {
+		console.log("! DLS: failed to converge");
+	}
+}
 
-	var delta = this.delta(target);
-	if (numeric.norm2Squared(delta) < 1e-4) {
-		return;
+kinematik.Ik.prototype.DLSstep = function(targframe, lambda){
+	var delta = this.delta_fromframe(targframe);
+	if (numeric.norm2Squared(delta) < 1e-5) {
+		return 1;
 	}
 
 	var J = this.jacobian();
@@ -25,34 +34,46 @@ kinematik.Ik.prototype.DLS = function(target){
 	dth = numeric.dotMV(dth, delta);
 
 	// implement the actuations.
+	
 	for (var i = 0; i < this.subject.links.length-1; ++i) {
 		var j = i + 1;
 		this.subject.links[j].increment(dth[i]);
 	}
 
-	// iterate.
-	this.DLS(target);
+	return 0;
 }
 
 // delta:	returns the difference between the target location and the
 // 		current position of the end effector, in terms of 6-coords.
-kinematik.Ik.prototype.delta = function(target){
+kinematik.Ik.prototype.delta_fromframe = function(targframe){
 	// endi is the index of the last link/joint, for convenience.
+	
 	var endi = this.subject.links.length-1;
-	// endtip is the current location of the end effector.
-	var endtip = this.subject.links[endi].frame.localtoglobal(
-	this.subject.links[endi].localjointlocation);
+	var endframe = this.subject.links[endi].frame;
 
 	var delta = [];
-	delta[0] = target[0] - endtip[0];
-	delta[1] = target[1] - endtip[1];
-	delta[2] = target[2] - endtip[2];
+	delta[0] = targframe.o[0] - endframe.o[0];
+	delta[1] = targframe.o[1] - endframe.o[1];
+	delta[2] = targframe.o[2] - endframe.o[2];
 
-	// placeholder
-	delta[3] = 0;
-	delta[4] = 0;
-	delta[5] = 0;
+	// magically figure out the rotation components
+	var targT = targframe.transform_mat4get();
+	var endT = endframe.transform_mat4get();
 
+	var nd = [targT[0][0], targT[1][0], targT[2][0], 1];
+	var sd = [targT[0][1], targT[1][1], targT[2][1], 1];
+	var ad = [targT[0][2], targT[1][2], targT[2][2], 1];
+
+	var ne = [endT[0][0], endT[1][0], endT[2][0], 1];
+	var se = [endT[0][1], endT[1][1], endT[2][1], 1];
+	var ae = [endT[0][2], endT[1][2], endT[2][2], 1];
+
+	var e = v4add(v4add(
+	v4x(ne, nd), v4x(se, sd)), v4x(ae, ad)).v4mul(0.5);
+
+	delta[3] = e[0];
+	delta[4] = e[1];
+	delta[5] = e[2];
 	return delta;
 }
 
