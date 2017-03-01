@@ -27,6 +27,14 @@ function Orbitcontrols(camera, renderer, scene){
 		f: Math.PI/2		// elevation
 	};
 
+	// shortcuts for special views:
+	// { keycode: spherical coordinates }
+	this.views = {
+	97:	{ o: [0, 0, 0, 1], r: 2, t: 0, f: 0 },
+	99:	{ o: [0, 0, 0, 1], r: 2, t: Math.PI/2, f: 0 },
+	103:	{ o: [0, 0, 0, 1], r: 2, t: -Math.PI/2, f: Math.PI/2 },
+	};
+
 
 	this.attachhandlers(camera, renderer, scene);
 
@@ -81,6 +89,12 @@ Orbitcontrols.prototype.camera_fromqspherical = function(newsphq){
 
 	this.camera.lookAt(new THREE.Vector3().fromArray(this.qspherical.o));
 	
+}
+
+Orbitcontrols.prototype.keydownhandler = function(e){
+	if (this.views[e.which]) {
+		this.camera_fromqspherical(this.views[e.which]);
+	}
 }
 
 Orbitcontrols.prototype.mousedownhandler = function(e){
@@ -146,6 +160,8 @@ Orbitcontrols.prototype.wheelhandler = function(e){
 }
 
 Orbitcontrols.prototype.attachhandlers = function(camera, renderer, scene){
+	window.addEventListener("keydown", this.keydownhandler.bind(this));
+
 	renderer.domElement.addEventListener(
 			"mousedown", this.mousedownhandler.bind(this));
 	renderer.domElement.addEventListener(
