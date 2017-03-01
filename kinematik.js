@@ -74,59 +74,6 @@ kinematik.KinematicChain.prototype.visual_sync = function(){
 }
 
 
-kinematik.Kbcontrols = function(target){
-	this.target = target;
-	
-	// increment and decrement triggers:
-	// { e.which : (actuates) this.link[i] }
-	this.actuate_state = {};
-	for (var i = 1; i < 10; ++i) { this.actuate_state[i] = 0; }
-
-	this.inc = {};
-	for (var i = 1; i < 10; ++i) { this.inc[i+48] = i; }
-
-	this.dec = {	65: 1, 83: 2, 68: 3, 70: 4, 71: 5,
-			72: 6, 74: 7, 75: 8, 76: 9 };
-	this.increment = 0.1; // default actuation increment per timestep
-
-	this.attachhandlers();
-
-}
-// attachhandlers:	binds keys 1-9 and A-L to CCW and CW actuation of the
-// 			first couple of joints.
-kinematik.Kbcontrols.prototype.attachhandlers = function(){
-	window.addEventListener("keydown", this.keydownhandler.bind(this));
-	window.addEventListener("keyup", this.keyuphandler.bind(this));
-}
-kinematik.Kbcontrols.prototype.keydownhandler = function(e){
-	// set state for relevant joint
-	if (this.inc[e.which]) {
-		this.actuate_state[this.inc[e.which]] = this.increment;
-	} else if (this.dec[e.which]) {
-		this.actuate_state[this.dec[e.which]] = -this.increment;
-	}
-}
-kinematik.Kbcontrols.prototype.keyuphandler = function(e){
-	// set state for relevant joint
-	if (this.inc[e.which]) {
-		this.actuate_state[this.inc[e.which]] = 
-		Math.min(this.actuate_state[this.inc[e.which]], 0);
-	} else if (this.dec[e.which]) {
-		this.actuate_state[this.dec[e.which]] = 
-		Math.max(this.actuate_state[this.dec[e.which]], 0);
-	}
-}
-kinematik.Kbcontrols.prototype.update = function(e){
-	for (var i = 1; i < 10; ++i) {
-		if (this.actuate_state[i] && this.target.links[i]) {
-		this.target.links[i].increment(this.actuate_state[i]);
-		}
-	}
-}
-kinematik.Kbcontrols.prototype.visual_sync = function(){ /* placeholder */ }
-
-
-
 // KinematicLink:	constructor for kinematic link object to be included
 //			in a kinematic chain.
 //
@@ -476,6 +423,7 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 		this.prev.frame.localtoglobal(this.prev.localjointlocation) :
 		[0, 0, 0, 1];
 	var tip = this.frame.localtoglobal(this.localjointlocation);
+	var mid = v4add(tip, toe).v4mul(0.5);
 	var shaftvector = v4sub(tip, toe);
 
 	// position and orient shaft.
@@ -529,9 +477,9 @@ kinematik.KinematicLink.prototype.visual_sync = function(){
 	// about arbitrarily on its axis. we choose from the x and z axes of
 	// the present frame, whichever is numerically nicer.
 	this.visual.shaft.up.fromArray(
-			Math.abs(v4dot(this.frame.axis[2], shaftvector)) <
-			Math.abs(v4dot(this.frame.axis[0], shaftvector)) ?
-			this.frame.axis[2] : this.frame.axis[0]
+		Math.abs(v4mag2(v4dot(shaftvector, this.frame.axis[2]))) >
+		Math.abs(v4mag2(v4dot(shaftvector, this.frame.axis[2]))) ?
+		this.frame.axis[2] : this.frame.axis[0]
 	);
 	
 	this.visual.shaft.lookAt(new THREE.Vector3().fromArray(toe));
