@@ -38,14 +38,15 @@ html, body {
 
 <!-- main.js -->
 <script>
-var cursor;
 
 // declarations for THREE
 var camera;
 var renderer;
 var scene;
 
+var cursor;
 var orbitcontrols;
+var kbcontrols;
 
 function initTHREE(){
 	// initialise camera
@@ -151,13 +152,15 @@ function init(){
 
 	manipulator.visual_init(camera, renderer, scene);
 
-	// init interaction
+
+	// init interaction with 3d cursor, keyboard controls for joints,
+	// & orbitcontrols for camera movement.
 	cursor = new Cursor(camera, renderer, scene);
 	cursor.visual_init(camera, renderer, scene);
 
 	orbitcontrols = new Orbitcontrols(camera, renderer, scene);
 
-	//orbitcontrols = new THREE.OrbitControls(camera, renderer.domElement);
+	kbcontrols = new kinematik.Kbcontrols(manipulator);
 
 }
 
@@ -174,13 +177,15 @@ function render(){
 	// update visual for the manipulator
 	manipulator.visual_sync();
 
-	// update controls
+	// update user interaction
 	cursor.update();
 	cursor.visual_sync();
 
 	orbitcontrols.update();
 	orbitcontrols.visual_sync();
 
+	kbcontrols.update();
+	kbcontrols.visual_sync();
 
 	// render the scene as seen through camera.
 	renderer.render(scene, camera);

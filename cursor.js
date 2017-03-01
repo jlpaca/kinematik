@@ -112,8 +112,6 @@ Cursor.prototype.q2d_setfromevent = function(e){ this.q2d = this.q2d_fromevent(e
 
 
 Cursor.prototype.keydownhandler = function(e){
-	console.log("keydown: " + e.which);
-
 	if (e.which == 27) { this.action_abort(); }		// ESC
 	if (e.which == 82) { this.rotation_start(); }		// RKEY
 	if (e.which == 84) { this.translation_start(); }	// TKEY
