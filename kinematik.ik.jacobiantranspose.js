@@ -2,7 +2,6 @@
 // 			solve the inverse kinematics problem numerically using
 // 			the DLS method.
 kinematik.Ik.prototype.jacobiantranspose = function(targframe){
-	var alpha = 0.3;	// scaling constant
 	var max_iter = 24;	// maximum number of iterations
 	var margin = 1e-5;	// accepted norm2squared of delta
 
@@ -15,6 +14,14 @@ kinematik.Ik.prototype.jacobiantranspose = function(targframe){
 
 		var J = this.jacobian();
 		var Jt = numeric.transpose(J);
+
+		// calculate alpha, the scaling constant, by assuming change
+		// in end effector position is exactly JJt*delta, and
+		// minimising the final error.
+		var JJtdelta = numeric.dot(
+			numeric.dot(J, Jt), delta);
+		var alpha = numeric.dot(delta, JJtdelta)/
+			numeric.dot(JJtdelta, JJtdelta);
 
 		var dth = numeric.dotMV(
 			numeric.mul(alpha, Jt),

@@ -1,5 +1,6 @@
 // DLS:	takes the target frame as an argument and attempts to solve the
-// 	inverse kinematics problem numerically using the DLS method.
+// 	inverse kinematics problem numerically using the DLS
+// 	(Levenberg-Marquardt) method.
 kinematik.Ik.prototype.DLS = function(targframe){
 	var lambda = 1;	// damping coefficient
 	var max_iter = 12;	// maximum number of iterations
