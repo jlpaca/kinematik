@@ -25,17 +25,25 @@ html, body {
 <script src="three.min.js"></script>
 <script src="numeric-1.2.6.min.js"></script>
 
-
+<!-- camera controls w/ spherical coordinates -->
 <script src="orbitcontrols.js"></script>
 
+<!-- 4-vector arithmetic, D-H parameters, coord. frames -->
 <script src="v4.js"></script>
 <script src="denavithartenberg.js"></script>
 <script src="frame.js"></script>
+
+<!-- 3d cursor -->
 <script src="cursor.js"></script>
 
+<!-- kinematics and keyboard bindings for fk -->
 <script src="kinematik.js"></script>
 <script src="kinematik.kbcontrols.js"></script>
+
+<!-- inverse kinematics solver scripts -->
 <script src="kinematik.ik.js"></script>
+<script src="kinematik.ik.dls.js"></script>
+<script src="kinematik.ik.sdls.js"></script>
 
 
 <!-- main.js -->
@@ -204,7 +212,7 @@ function timestep(){
 
 	manipulator.data_fromDH(null);
 
-	ik.SDLS(cursor.frame);
+	ik.DLS(cursor.frame);
 		
 
 	requestAnimationFrame(timestep);
