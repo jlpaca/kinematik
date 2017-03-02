@@ -11,7 +11,7 @@ kinematik.Ik.prototype.DLS = function(targframe){
 		var delta = this.delta_fromframe(targframe);
 		var error = numeric.norm2Squared(delta);
 		if (error < margin) { return; }
-		console.log(lambda*error);
+
 		var J = this.jacobian();
 		var Jt = numeric.transpose(J);
 
@@ -19,6 +19,8 @@ kinematik.Ik.prototype.DLS = function(targframe){
 		numeric.inv(
 			numeric.add(
 				numeric.dot(J, Jt),
+				// experimental: scale the damping
+				// coefficient when close to target
 				numeric.mul(lambda*lambda*error*error,
 				numeric.identity(6))
 			)

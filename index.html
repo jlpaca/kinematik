@@ -44,6 +44,7 @@ html, body {
 <script src="kinematik.ik.js"></script>
 <script src="kinematik.ik.dls.js"></script>
 <script src="kinematik.ik.sdls.js"></script>
+<script src="kinematik.ik.jacobiantranspose.js"></script>
 
 
 <!-- main.js -->
@@ -212,7 +213,7 @@ function timestep(){
 
 	manipulator.data_fromDH(null);
 
-	ik.DLS(cursor.frame);
+	ik.jacobiantranspose(cursor.frame);
 		
 
 	requestAnimationFrame(timestep);
