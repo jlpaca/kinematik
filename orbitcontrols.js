@@ -7,7 +7,7 @@ function Orbitcontrols(camera, renderer, scene){
 	this.dragstart.q2d = [0, 0];
 	this.dragstart.qspherical = {
 		o: [0, 0, 0, 1],
-		r: 2,
+		r: 2.5,
 		t: 0,
 		f: Math.PI/2
 	}
@@ -22,7 +22,7 @@ function Orbitcontrols(camera, renderer, scene){
 	// the position of the camera in spherical coords.
 	this.qspherical = {
 		o: [0, 0, 0, 1],	// origin
-		r: 2,			// radial distance
+		r: 2.5,			// radial distance
 		t: -Math.PI/2,		// azimuth
 		f: Math.PI/2		// elevation
 	};
@@ -30,9 +30,9 @@ function Orbitcontrols(camera, renderer, scene){
 	// shortcuts for special views:
 	// { keycode: spherical coordinates }
 	this.views = {
-	97:	{ o: [0, 0, 0, 1], r: 2, t: 0, f: 0 },
-	99:	{ o: [0, 0, 0, 1], r: 2, t: Math.PI/2, f: 0 },
-	103:	{ o: [0, 0, 0, 1], r: 2, t: -Math.PI/2, f: Math.PI/2 },
+	97:	{ o: [0, 0, 0, 1], r: 2.5, t: 0, f: 0 },
+	99:	{ o: [0, 0, 0, 1], r: 2.5, t: Math.PI/2, f: 0 },
+	103:	{ o: [0, 0, 0, 1], r: 2.5, t: -Math.PI/2, f: Math.PI/2 },
 	};
 
 

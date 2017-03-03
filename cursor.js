@@ -137,6 +137,11 @@ Cursor.prototype.mousemovehandler = function(e){
 	this.q2d_setfromevent(e);
 	this.q3d_setfromevent(e, this.q2d);
 
+	if (!(this.state.translation || this.state.rotation) &&
+		e.which == 1) {
+		this.frame.transform_set(this.q3d, null);
+	}
+
 	if (this.state.translation) { this.translation_sync(); }
 	if (this.state.rotation) { this.rotation_sync(); }
 }
