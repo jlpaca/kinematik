@@ -6,7 +6,7 @@ _Kinematik_ is a web-based tool for the simulation and visualisation of articula
 
 _Kinematik_ is written in javascript and should run on modern browsers with webGL support.
 
-This repository is hosted on github pages [here](https://jhjuhn.github.io/kinematik).
+This repository is hosted on github pages [here](https://osteon.github.io/kinematik).
 
 
 ## Controls
