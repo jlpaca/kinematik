@@ -32,4 +32,4 @@ This repository is hosted on github pages [here](https://osteon.github.io/kinema
 * SHIFT: slow down actuation speed
 
 ### Inverse Kinematics Mode
-* (the end effector, defined as the final joint in the kinematic chain, follows the 3D cursor)
+* (the end effector follows the 3D cursor.)
