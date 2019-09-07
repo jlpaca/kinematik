@@ -1,10 +1,6 @@
 # Kinematik
 
-_Kinematik_ is a web-based tool for the simulation and visualisation of articulate robots.
-
-## Getting Started
-
-_Kinematik_ is written in javascript and should run on modern browsers with webGL support.
+_Kinematik_ is a small web-based tool for the simulation and visualisation of articulate robots, written in 2016. It is written in javascript and should still run on modern browsers with webGL support.
 
 This repository is hosted on github pages [here](https://osteon.github.io/kinematik).
 
